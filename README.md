@@ -1,36 +1,46 @@
 # hermes_SAFB_migration
 
-Hermes Sandbox for SAFB (Single Agent Framework Builder) Migration.
+Hermes Sandbox — Single Agent Framework Builder Migration
+
+## Overview
+
+This repository hosts the Hermes OpenShell sandbox environment configured for
+research, prototyping, and migration work. It provides a fully containerized
+development setup with Python, C/C++, and research tooling.
 
 ## Environment
 
-This sandbox runs on NVIDIA OpenShell with Nemoclaw, providing:
+| Component | Path / Details |
+|---|---|
+| Conda / Miniforge3 | `/sandbox/miniforge3` |
+| Conda Environment | `build-env` |
+| Python | 3.13 |
+| GCC / G++ | 15.2 (Conda target-prefixed) |
+| CMake | 4.3.2 |
+| Git Config | `/sandbox/gitconfig-sjbot0510` |
+| GH Config | `/sandbox/gh-config-sjbot0510` |
+| Token Source | `/sandbox/secrets/sjbot0510_github_token` |
 
-- **Conda/Miniforge3** — package management at `/sandbox/miniforge3`
-- **build-env** — Conda environment with Python 3.13, C/C++ tooling, and research libraries
-- **GCC/G++ 15.2** — via Conda target-prefixed compilers (`$CC`, `$CXX`)
-- **CMake 4.3.2** — for C/C++ project builds
-- **Research stack** — NumPy, SciPy, SymPy, Pandas, Matplotlib, BeautifulSoup4, LXML, python-docx, OpenPyXL
-- **Code quality** — pytest, Ruff, Black, MyPy
+### Python Packages
 
-### Setup
+- **Scientific**: NumPy, SciPy, SymPy, Pandas, Matplotlib
+- **Web scraping**: BeautifulSoup4, LXML
+- **Document handling**: python-docx, OpenPyXL
+- **Testing & linting**: pytest, Ruff, Black, MyPy
 
-Always initialize the build environment before any work:
+## Quick Start
+
+### 1. Initialize the build environment
 
 ```bash
 source /sandbox/setup_build.sh
 ```
 
-This configures:
-- Conda activation (`build-env`)
-- C/C++ compiler paths (`$CC`, `$CXX`)
-- GitHub CLI authentication
-- Git user configuration
+> **Important:** Always use `source`, never `bash`, so shell variables persist.
 
-### Verification
+### 2. Verify the environment
 
 ```bash
-source /sandbox/setup_build.sh
 which python
 python --version
 echo "$CC"
@@ -41,16 +51,60 @@ cmake --version
 pytest --version
 ```
 
+### 3. Build a C/C++ project
+
+```bash
+mkdir build && cd build
+cmake .. \
+  -DCMAKE_C_COMPILER="$CC" \
+  -DCMAKE_CXX_COMPILER="$CXX"
+make
+```
+
 ## GitHub Authentication
 
-- **User:** Sjbot0510
-- **Token:** Managed via `/sandbox/secrets/sjbot0510_github_token`
-- **Config Dir:** `/sandbox/gh-config-sjbot0510`
-- **Git Config:** `/sandbox/gitconfig-sjbot0510`
-- **Protocol:** HTTPS
+- **Username:** `Sjbot0510`
+- **Email:** `sjbotchen@gmail.com`
+- **Token:** Loaded from `/sandbox/secrets/sjbot0510_github_token`
+- **Protocol:** HTTPS (`git_protocol https`)
+- **Credential helper:** `gh auth git-credential`
 
-## Constraints
+```bash
+source /sandbox/setup_build.sh
+gh auth status          # verify authentication
+gh repo create          # create a new repo
+gh pr create            # open a PR
+```
 
-- No `sudo apt install` available — use Conda (`conda-forge`) or pip only
-- Conda requires `CONDA_NO_PLUGINS=true`, `CONDA_OVERRIDE_CUDA=""`, and `solver classic` (due to sandbox restrictions)
-- For CMake projects, always pass `-DCMAKE_C_COMPILER="$CC" -DCMAKE_CXX_COMPILER="$CXX"`
+## Sandbox Constraints
+
+1. **No `sudo apt install`** — use Conda (`conda install -c conda-forge`) or pip.
+2. **Conda safety flags** must be set:
+   - `CONDA_NO_PLUGINS=true`
+   - `CONDA_OVERRIDE_CUDA=""`
+   - `solver classic`
+   
+   These prevent crashes from CUDA auto-detection and libmamba in the protected
+   sandbox environment.
+3. **Compiler paths** — use `$CC` and `$CXX`, not bare `gcc`/`g++`.
+4. **CMake** — always pass both `-DCMAKE_C_COMPILER="$CC"` and `-DCMAKE_CXX_COMPILER="$CXX"`.
+
+## Directory Structure
+
+```
+/sandbox/
+├── miniforge3/              # Conda installation
+├── secrets/                 # Token files (gitignored)
+├── setup_build.sh           # Environment initialization script
+├── gh-config-sjbot0510/     # GitHub CLI config
+└── gitconfig-sjbot0510      # Git global config
+```
+
+## Troubleshooting
+
+| Problem | Solution |
+|---|---|
+| `gcc: command not found` | Use `$CC --version` instead |
+| Conda crashes on install | Verify `CONDA_NO_PLUGINS=true` and `solver classic` |
+| GitHub auth fails | Run `source /sandbox/setup_build.sh` first |
+| CUDA-related errors | Ensure `CONDA_OVERRIDE_CUDA=""` is set |
