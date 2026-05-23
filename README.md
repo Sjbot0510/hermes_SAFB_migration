@@ -13,7 +13,7 @@ development setup with Python, C/C++, and research tooling.
 | Component | Path / Details |
 |---|---|
 | Conda / Miniforge3 | `/sandbox/miniforge3` |
-| Conda Environment | `build-env` |
+| Conda Environment | `build` |
 | Python | 3.13 |
 | GCC / G++ | 15.2 (Conda target-prefixed) |
 | CMake | 4.3.2 |
