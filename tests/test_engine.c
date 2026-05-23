@@ -77,6 +77,7 @@ static SymmGroup make_p2_group(void) {
 /* Paths to real symmetry operation files */
 #define P1_PATH "/sandbox/hermes_SAFB_migration/examples/space_groups_3d/Cubic/P_m_-3_m.txt"
 #define P4MMC_PATH "/sandbox/hermes_SAFB_migration/examples/space_groups_3d/Tetragonal/P_42_m_m_c.txt"
+#define P1_PATH2 "/sandbox/hermes_SAFB_migration/examples/space_groups_3d/Cubic/P_1.txt"
 
 TEST(engine_manual_p1)
 {
@@ -207,12 +208,12 @@ TEST(engine_output_field)
 
 TEST(engine_full_pipeline)
 {
-    LatticeInfo lat = {1.0, 1.0, 1.0, 90.0, 90.0, 90.0, 3};
+    LatticeInfo lat = {4.0, 4.0, 4.0, 90.0, 90.0, 90.0, 3};
     DistParams params = {0.0, 1.0};
 
     int ret = engine_full_pipeline(
-        "P1",
-        P1_PATH,
+        "P42/mmc",
+        P4MMC_PATH,
         &lat,
         5,
         DIST_UNIFORM,
@@ -223,7 +224,7 @@ TEST(engine_full_pipeline)
         20.0,
         0, 1, 1, 1
     );
-    ASSERT(ret == 0, "Full pipeline should succeed for Pm-3m");
+    ASSERT(ret == 0, "Full pipeline should succeed for P42/mmc");
 
     FILE *f = fopen("/tmp/test_full_pipeline.vts", "r");
     ASSERT(f != NULL, "Pipeline VTS file should exist");

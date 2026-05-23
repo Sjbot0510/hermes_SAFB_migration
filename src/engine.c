@@ -124,28 +124,35 @@ int engine_random_init(
         warnings,
         MAX_WARNINGS
     );
-    if (ret != 0) return -1;
+    if (ret == 0) return -1;  // 0 = no coeffs matched = failure
 
-    /* Build result from coeffs — we need to construct amplitude_keys and amplitudes */
-    char amplitude_keys[MAX_MODES][32];
+    /* Build result from coeffs — construct proper pointer array for amplitude_keys */
+    char raw_keys[MAX_MODES][32];
+    const char *amplitude_keys[MAX_MODES];
     double amplitudes[MAX_MODES];
-    for (int i = 0; i < MAX_MODES; i++) {
-        if (i < ctx->basis.modes_count && i < MAX_MODES) {
-            strncpy(amplitude_keys[i], ctx->basis.modes[i].family_key, 31);
-            amplitude_keys[i][31] = '\0';
+    memset(raw_keys, 0, sizeof(raw_keys));
+    memset(amplitudes, 0, sizeof(amplitudes));
+    int valid = ctx->basis.modes_count;
+    if (valid > MAX_MODES) valid = MAX_MODES;
+    for (int i = 0; i < valid; i++) {
+        if (out_coeffs[i].count > 0) {
+            strncpy(raw_keys[i], out_coeffs[i].family_key, 31);
+            raw_keys[i][31] = '\0';
+            amplitude_keys[i] = raw_keys[i];
             amplitudes[i] = out_coeffs[i].coeffs[0].real;
         }
     }
 
-    return build_initialization_result(
+    int ret2 = build_initialization_result(
         &ctx->basis,
         out_coeffs,
-        ctx->basis.modes_count,
+        valid,
         amplitudes,
-        (const char *const *)amplitude_keys,
-        ctx->basis.modes_count,
+        amplitude_keys,
+        valid,
         result
     );
+    return ret2;
 }
 
 /* ========================================================================
@@ -173,21 +180,21 @@ int engine_manual_init(
         warnings,
         MAX_WARNINGS
     );
-    if (ret != 0) return -1;
+    if (ret == 0) return -1;  // no matching keys found
 
     return build_initialization_result(
         &ctx->basis,
         out_coeffs,
         n_amplitudes,
         amplitudes,
-        (const char *const *)amplitude_keys,
+        amplitude_keys,
         n_amplitudes,
         result
     );
 }
 
 /* ========================================================================
- * File initialization
+ * File initialization — replicate engine.init_from_file()
  * ======================================================================== */
 
 int engine_file_init(
@@ -212,24 +219,30 @@ int engine_file_init(
         warnings,
         MAX_WARNINGS
     );
-    if (ret != 0) return -1;
+    if (ret == 0) return -1;  // no matching peaks found
 
     /* For file init, amplitude_keys come from the file; use basis modes as fallback */
-    char amplitude_keys[MAX_MODES][32];
+    char raw_keys[MAX_MODES][32];
+    const char *amplitude_keys[MAX_MODES];
     double amplitudes[MAX_MODES];
-    for (int i = 0; i < ctx->basis.modes_count && i < MAX_MODES; i++) {
-        strncpy(amplitude_keys[i], ctx->basis.modes[i].family_key, 31);
-        amplitude_keys[i][31] = '\0';
+    memset(raw_keys, 0, sizeof(raw_keys));
+    memset(amplitudes, 0, sizeof(amplitudes));
+    int na = ctx->basis.modes_count;
+    if (na > MAX_MODES) na = MAX_MODES;
+    for (int i = 0; i < na; i++) {
+        strncpy(raw_keys[i], ctx->basis.modes[i].family_key, 31);
+        raw_keys[i][31] = '\0';
+        amplitude_keys[i] = raw_keys[i];
         amplitudes[i] = out_coeffs[i].coeffs[0].real;
     }
 
     return build_initialization_result(
         &ctx->basis,
         out_coeffs,
-        ctx->basis.modes_count,
+        na,
         amplitudes,
-        (const char *const *)amplitude_keys,
-        ctx->basis.modes_count,
+        amplitude_keys,
+        na,
         result
     );
 }

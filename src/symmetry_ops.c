@@ -837,6 +837,42 @@ void float_to_miller_int(const double hB[3], int max_den, double tol,
  * a simplified version that works for small N values.
  * ======================================================================== */
 
+/* Global grid data for qsort comparator (re-set before each sort) */
+static int *grid_H_global;
+static int *grid_K_global;
+static int *grid_L_global;
+static double *grid_q2_global;
+
+/* Comparator for qsort on grid index arrays: by q2, then lexicographic (H,K,L) */
+static int cmp_grid_idx(const void *a, const void *b) {
+    int ia = *(const int*)a;
+    int ib = *(const int*)b;
+    double qa = grid_q2_global[ia], qb = grid_q2_global[ib];
+    if (qa < qb) return -1;
+    if (qa > qb) return 1;
+    int ha = grid_H_global[ia], hb = grid_H_global[ib];
+    int ka = grid_K_global[ia], kb = grid_K_global[ib];
+    int la = grid_L_global[ia], lb = grid_L_global[ib];
+    if (ha < hb) return -1;
+    if (ha > hb) return 1;
+    if (ka < kb) return -1;
+    if (ka > kb) return 1;
+    if (la < lb) return -1;
+    if (la > lb) return 1;
+    return 0;
+}
+
+/* Quick hash-based duplicate check for family keys.
+ * Simple 3-int hash into a large open-addressing table. */
+#define HASH_TABLE_SIZE 65536
+
+static int hash_key(const int key[3]) {
+    unsigned long h = (unsigned long)key[0] * 73856093UL
+                    ^ (unsigned long)key[1] * 19349663UL
+                    ^ (unsigned long)key[2] * 83492791UL;
+    return (int)(h % HASH_TABLE_SIZE);
+}
+
 FamilyPlanesInfo* family_planes_info(int N,
                                      const double Ginv[3][3],
                                      const SymmGroup *sg,
@@ -861,16 +897,32 @@ FamilyPlanesInfo* family_planes_info(int N,
     int hard_limit = 50;
     int seen_count = 0;
 
-    /* Seen keys — track which family keys we've already accepted */
-    int seen_keys[MAX_MODES][3];
-    memset(seen_keys, 0, sizeof(seen_keys));
-
     /* Grid arrays (heap-allocated) */
     int grid_size_max = 2000000;
     int *grid_H = (int *)malloc(sizeof(int) * grid_size_max);
     int *grid_K = (int *)malloc(sizeof(int) * grid_size_max);
     int *grid_L = (int *)malloc(sizeof(int) * grid_size_max);
     double *grid_q2 = (double *)malloc(sizeof(double) * grid_size_max);
+
+    /* Index array for sorting (allows qsort without moving the actual data) */
+    int *grid_idx = (int *)malloc(sizeof(int) * grid_size_max);
+    if (!grid_idx || !grid_H || !grid_K || !grid_L || !grid_q2) {
+        free(grid_idx); free(grid_H); free(grid_K); free(grid_L); free(grid_q2);
+        family_planes_info_free(info);
+        return NULL;
+    }
+
+    /* Hash table for seen keys: heap-allocated open-addressing table */
+    int (*ht_key)[3] = (int(*)[3])malloc(sizeof(int[3]) * HASH_TABLE_SIZE);
+    int *ht_next = (int *)malloc(sizeof(int) * HASH_TABLE_SIZE);
+    if (!ht_key || !ht_next) {
+        free(ht_key); free(ht_next);
+        free(grid_idx); free(grid_H); free(grid_K); free(grid_L); free(grid_q2);
+        family_planes_info_free(info);
+        return NULL;
+    }
+    memset(ht_next, -1, sizeof(int) * HASH_TABLE_SIZE);
+    memset(ht_key, 0, sizeof(int[3]) * HASH_TABLE_SIZE);
 
     while (seen_count < N) {
         if (current_max > hard_limit) {
@@ -894,6 +946,7 @@ FamilyPlanesInfo* family_planes_info(int N,
                     grid_q2[gs] = v[0]*(Ginv[0][0]*v[0]+Ginv[0][1]*v[1]+Ginv[0][2]*v[2]) +
                                   v[1]*(Ginv[1][0]*v[0]+Ginv[1][1]*v[1]+Ginv[1][2]*v[2]) +
                                   v[2]*(Ginv[2][0]*v[0]+Ginv[2][1]*v[1]+Ginv[2][2]*v[2]);
+                    grid_idx[gs] = gs;
                     gs++;
                 } else {
                     for (int ll = -r; ll <= r && gs < grid_size_max; ll++) {
@@ -905,39 +958,25 @@ FamilyPlanesInfo* family_planes_info(int N,
                         grid_q2[gs] = v[0]*(Ginv[0][0]*v[0]+Ginv[0][1]*v[1]+Ginv[0][2]*v[2]) +
                                       v[1]*(Ginv[1][0]*v[0]+Ginv[1][1]*v[1]+Ginv[1][2]*v[2]) +
                                       v[2]*(Ginv[2][0]*v[0]+Ginv[2][1]*v[1]+Ginv[2][2]*v[2]);
+                        grid_idx[gs] = gs;
                         gs++;
                     }
                 }
             }
         }
 
-        /* Sort by q2, then lexicographic */
-        for (int i = 0; i < gs - 1; i++) {
-            for (int j = i + 1; j < gs; j++) {
-                int swap = 0;
-                if (grid_q2[i] > grid_q2[j]) swap = 1;
-                else if (fabs(grid_q2[i] - grid_q2[j]) < 1e-12) {
-                    if (grid_H[i] > grid_H[j]) swap = 1;
-                    else if (grid_H[i] == grid_H[j]) {
-                        if (grid_K[i] > grid_K[j]) swap = 1;
-                        else if (grid_K[i] == grid_K[j]) {
-                            if (grid_L[i] > grid_L[j]) swap = 1;
-                        }
-                    }
-                }
-                if (swap) {
-                    int th = grid_H[i]; grid_H[i] = grid_H[j]; grid_H[j] = th;
-                    int tk = grid_K[i]; grid_K[i] = grid_K[j]; grid_K[j] = tk;
-                    int tl = grid_L[i]; grid_L[i] = grid_L[j]; grid_L[j] = tl;
-                    double tq = grid_q2[i]; grid_q2[i] = grid_q2[j]; grid_q2[j] = tq;
-                }
-            }
-        }
+        /* Sort by q2, then lexicographic — O(gs log gs) with qsort */
+        grid_H_global = grid_H;
+        grid_K_global = grid_K;
+        grid_L_global = grid_L;
+        grid_q2_global = grid_q2;
+        qsort(grid_idx, gs, sizeof(int), cmp_grid_idx);
 
         for (int g = 0; g < gs; g++) {
             if (seen_count >= N) break;
 
-            int hkl[3] = {grid_H[g], grid_K[g], grid_L[g]};
+            int idx = grid_idx[g];
+            int hkl[3] = {grid_H[idx], grid_K[idx], grid_L[idx]};
 
             int star_buf[MAX_STAR_VECTORS][3];
             int star_count = star_from_hkl(hkl, unique_R, n_unique, Ginv, star_buf);
@@ -945,22 +984,35 @@ FamilyPlanesInfo* family_planes_info(int N,
             int key[3];
             get_family_key_lexicographical(star_buf, star_count, key);
 
-            /* Check if already seen */
+            /* Quick duplicate check using hash table — O(1) amortized */
+            int h = hash_key(key);
             int dup = 0;
-            for (int s = 0; s < seen_count; s++) {
-                if (seen_keys[s][0] == key[0] && seen_keys[s][1] == key[1] && seen_keys[s][2] == key[2]) {
+            for (int slot = h; slot != -1; slot = ht_next[slot]) {
+                if (ht_key[slot][0] == key[0] &&
+                    ht_key[slot][1] == key[1] &&
+                    ht_key[slot][2] == key[2]) {
                     dup = 1;
                     break;
                 }
             }
             if (dup) continue;
 
-            /* Compute relationships */
+            /* Compute relationships — only for new families */
             StarRelationships rels = relationships_in_star(sg, star_buf, star_count);
 
             /* Skip if there are contradictions */
             if (rels.unary_contra_count > 0 || rels.binary_contra_count > 0) {
                 continue;
+            }
+
+            /* Store in seen set */
+            if (!dup) {
+                int slot = h;
+                while (ht_next[slot] != -1) slot = ht_next[slot];
+                ht_key[slot][0] = key[0];
+                ht_key[slot][1] = key[1];
+                ht_key[slot][2] = key[2];
+                ht_next[slot] = -1;
             }
 
             /* Store */
@@ -969,9 +1021,6 @@ FamilyPlanesInfo* family_planes_info(int N,
             info->star_counts[m] = star_count;
             memcpy(info->stars[m], star_buf, star_count * 3 * sizeof(int));
             info->all_rels[m] = rels;
-            seen_keys[m][0] = key[0];
-            seen_keys[m][1] = key[1];
-            seen_keys[m][2] = key[2];
             seen_count++;
         }
 
@@ -980,10 +1029,13 @@ FamilyPlanesInfo* family_planes_info(int N,
 
     info->count = seen_count;
 
+    free(grid_idx);
     free(grid_H);
     free(grid_K);
     free(grid_L);
     free(grid_q2);
+    free(ht_key);
+    free(ht_next);
 
     return info;
 }
