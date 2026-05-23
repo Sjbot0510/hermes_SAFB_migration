@@ -2,37 +2,31 @@
 
 ## Session Log
 
-### Session 1 — Initial Setup (2026-05-23)
+### Session 2 — Core Modules Complete (2026-05-23)
 
 **Date**: 2026-05-23
-**Task**: Project initialization and documentation setup
+**Task**: Verify, debug, and commit all core module translations
 
-**Files Created**:
-- `AGENTS.md` — Agent role, coding rules, build rules, project overview
-- `MIGRATION_PLAN.md` — 7-phase migration plan with tasks and dependencies
-- `MIGRATION_STATUS.md` — Current progress tracking (Phase 1 in progress)
-- `PYTHON_REFERENCE_MAP.md` — Complete Python→C function mapping for all 6 modules
-- `VALIDATION_PLAN.md` — 6 test cases with inputs, expected outputs, tolerances
-- `CHANGELOG_AGENT.md` — This file
+**Bug Fixes**:
+- Fixed `freqf_int()` threshold: changed from `N/2 + 1` to `N - N/2` (ceil(N/2)) to match numpy's `fftfreq()` behavior for all N
+- Fixed VTK writer test: check for scientific notation `"5.000000000000000e-01"` instead of `"0.5"`
 
-**C Project Skeleton Created**:
-- `src/` — Source directory (empty, ready for modules)
-- `include/` — Header directory (empty, ready for modules)
-- `tests/` — Test directory (empty, ready for test programs)
-- `examples/` — Example data directory
-- `Makefile` — Build system with targets: all, clean, test, test_<module>
-- `.gitignore` — Ignore .o, .vts, __pycache__, secrets
+**Modules Verified as Working (All Tests Pass)**:
+- `domain.h/c` — data structures
+- `symmetry_ops.h/c` — fraction math, ops parsing, star generation, relationships, BFS solver, family planes
+- `basis.h/c` — basis_build orchestrator
+- `initializers.h/c` — RNG, random/manual/file initialization, scattering file parsing
+- `field.h/c` — iFFT (Cooley-Tukey + DFT fallback), coeff placement, tanh normalization, VTK .vts writer
 
-**Python Project Inspected**:
-- `/sandbox/Sg_init/` — Full SAFB Python project analyzed
-- 6 core modules: domain.py, symmetry_ops.py, space_group_plane_family.py, engine.py, initializers.py, field.py, Analytic.py
-- Symmetry operators data: 2D plane groups and 3D space groups in txt format
-- Example notebooks: 12 Jupyter notebooks with use cases
+**Test Results**: 46/46 tests passing across 5 test suites (domain, symmetry_ops, basis, initializers, field)
 
-**What Was Tested**: No C code compiled yet (project skeleton only)
+**What Was Tested**: Full build + `make test` — all 5 test suites pass
 
-**What Failed or Remains Uncertain**: None — this was setup only
+**What Failed or Remains Uncertain**:
+- Engine layer (Phase 6) not yet implemented
+- Analytic calculations (Phase 6.2) not yet implemented
+- Some compiler warnings remain (unused parameter in field.h, strncpy truncation in test)
 
-**Next Recommended Task**: Task 1.2 — Translate `domain.h` / `domain.c` data structures
+**Next Recommended Task**: Task 6.1 — engine.c
 
-**Git Commit**: None yet (skeleton files not yet committed)
+**Git Commit**: `aa19f34 fix: correct freqf_int threshold for numpy fftfreq match + fix VTK test string check`
