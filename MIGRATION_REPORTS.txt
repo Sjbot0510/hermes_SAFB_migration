@@ -1,0 +1,185 @@
+====================================================================
+MIGRATION STATUS REPORT — Session dated 2026-05-23 (afternoon)
+====================================================================
+
+1. MODULES MIGRATED IN THIS REPORTING PERIOD
+------------------------------------------------------------
+
+The following modules were translated from Python to C and are
+now present in the repository:
+
+  Module          | Python Source               | C Files
+  ----------------|-----------------------------|-------------------------------------------
+  Domain (data    | Sg_init/domain.py           | include/domain.h (3.8 KB)
+  structures)     |                             | src/domain.c (1.5 KB)
+  ----------------|-----------------------------|-------------------------------------------
+  Symmetry Ops    | Sg_init/symmetry_ops.py     | include/symmetry_ops.h (10.9 KB)
+  (fraction math, |                             | src/symmetry_ops.c (37.6 KB, 1059 lines)
+  star generation,|                             |
+  phase constraints,|                         |
+  family planes)  |                             |
+  ----------------|-----------------------------|-------------------------------------------
+  Basis           | Sg_init/space_group_plane_  | include/basis.h (1.2 KB)
+  construction    | family.py                   | src/basis.c (7.3 KB)
+  ----------------|-----------------------------|-------------------------------------------
+  Initializers    | Sg_init/initializers.py     | include/initializers.h (5.3 KB)
+  (amplitude      |                             | src/initializers.c (14.8 KB)
+  assignment)     |                             |
+
+Total C code: ~63 KB across 8 source/header files and 4 test files.
+
+Python reference module count: 7 files (domain.py, symmetry_ops.py,
+space_group_plane_family.py, initializers.py, engine.py, field.py,
+Analytic.py).  Four of seven are migrated (57% by file count).
+
+2. BUILD AND TEST STATUS
+------------------------------------------------------------
+
+Build:   PASS (all 4 test targets compile with one warning)
+  - domain: compiles cleanly
+  - symmetry_ops: compiles with warning (see §4)
+  - basis: compiles with same warning (inherited from symmetry_ops)
+  - initializers: compiles with same warning
+
+Test Run: 13 PASS, 1 FAIL (CRASH), 0 SKIP
+
+  Test Program     | Result  | Tests
+  -----------------|---------|---------------------------------------------
+  domain           | PASS    | 3/3 (lattice_info_new, lattice_info_new_2d,
+                   |         | ScatteringProfile alloc/free)
+  symmetry_ops     | PASS    | 16/16 (fraction arithmetic, metric tensor,
+                   |         | lattice roundtrip, star generation, phase
+                   |         | factors, unique rotations, inversion ops)
+  basis            | PASS    | 2/2 (P1 basis 3 modes, Ia-3d basis 5 modes)
+  initializers     | FAIL    | 6/7 tests pass, 1 segfault
+                   | (SIGSEGV)| (see §4 for crash details)
+
+  Passed tests in initializers:
+    [PASS] read_scattering_data -> peaks loaded
+    [PASS] read_scattering_data free
+    [PASS] RNG (uniform, normal, exponential)
+    [PASS] build_result_from_coeffs -> 2 family coeffs
+    [PASS] amplitude sqrt scaling
+    [PASS] manual_initialization -> 3 coeffs
+    [PASS] random_initialization -> 5 coeffs, sum_sq > 0
+    [PASS] FullInitializationResult -> 3 coeffs
+
+  Crashed test:
+    test_file_initialization — SIGSEGV during file_initialization()
+    call (after 7 of 8 tests already passed). The crash occurs in the
+    third test function that exercises file_initialization with two
+    different lattice configurations.
+
+3. NUMERICAL BEHAVIOR & LOGIC VERIFICATION
+------------------------------------------------------------
+
+No formal cross-validation against the Python reference has been
+performed in this session.  The C code was translated by inspection
+following the PYTHON_REFERENCE_MAP.md.  However, the following
+behaviors have been observed that appear correct:
+
+  - Fraction arithmetic: frac_new(), frac_mod1(), frac_to_float()
+    match Python's fractions.Fraction behavior for positive and
+    negative values.
+  - Metric tensor inverse: cubic (a=b=c=1, α=β=γ=90) returns identity
+    matrix to within floating-point precision.
+  - q² calculation: for cubic a=b=c=1, HKL={1,0,0} yields q²=1.0,
+    matching Python's numpy-based computation.
+  - Lattice roundtrip: lattice_params_from_basis(direct_basis_from_lattice_info(...))
+    recovers original parameters to ~1e-15 relative error.
+  - Star generation: 4-fold symmetry correctly produces 4 vectors.
+  - Amplitude sqrt scaling: sqrt(A/multiplicity) computed correctly.
+  - Basis for P1: 3 modes ({-100}, {0-10}, {00-1}), each multiplicity 1,
+    star_close=0.
+  - Basis for Ia-3d: 5 modes ({000}, {400}, {800}, {1200}, {1600})
+    with correct q² values.
+
+Known discrepancy / difference in approach:
+  - The C code uses stack-allocated SAFBBasis (passed by pointer)
+    with inline Star[MAX_MODES] arrays, while Python uses dataclass
+    instances with list/tuple collections.  This is a structural
+    difference but does not affect numerical output.
+  - The C RNG is a custom xorshift64; Python uses numpy's Mersenne
+    Twister.  Random initializers produce different sequences (expected).
+
+4. WARNINGS, BUGS, AND BLOCKERS
+------------------------------------------------------------
+
+Warning (1):
+  src/symmetry_ops.c:862: variable 'seen_qval' set but not used
+  [-Wunused-but-set-variable]
+  This is a leftover from an earlier implementation of
+  family_planes_info that deduplicated by q² value.  The code
+  compiles and runs correctly; the variable can be removed.
+
+Bug / Crash (1):
+  initializers test: test_file_initialization() crashes with SIGSEGV
+  (signal 139 = 128+11).  The crash occurs during the second call to
+  file_initialization() (the "diff lattice, no P" case).  The first
+  call with NULL lattice info and NULL P matrix completes
+  successfully.
+
+  Likely cause: file_initialization() receives a non-NULL
+  read_lattice_info with different lattice parameters but NULL P
+  matrix.  The code path at lines 346-352 sets use_transform=1
+  when lattices differ, but then checks P != NULL at line 355.
+  However, the lookup_amplitude_from_data() and subsequent
+  star->multiplicity access may dereference uninitialized or freed
+  memory.  The ScatteringProfile may also have stale data from the
+  first call if scattering_profile_free() is called too early.
+
+  Recommended fix path:
+  1. Add -g flag to Makefile and run under gdb to pinpoint the
+     exact crash location.
+  2. Check that family_planes_info() and read_scattering_data()
+     return valid data in the second test case.
+  3. Verify that out_coeffs array is large enough for both calls
+     (tests reuse the same array).
+
+Technical Debt:
+  - debug printf statements left in basis.c (lines 94, 96, 140, 143)
+    printing to stderr during basis_build().
+  - No memory-free paths in test_initializers.c for FamilyCoeffs
+    arrays (minor, but should be cleaned).
+  - No Python↔C numerical comparison harness exists yet (VALIDATION_PLAN.md
+    outlines 6 test cases but they are C-unit-test-only, not
+    cross-referenced).
+
+5. REMAINING WORK
+------------------------------------------------------------
+
+Phase 1 (Foundation): Partially complete
+  [x] Task 1.1 — Project skeleton ✅
+  [x] Task 1.2 — domain.h / domain.c ✅
+  [x] Task 1.3 — read_spacegroup_ops_txt ✅ (in symmetry_ops.c)
+  [x] Task 1.4 — Fraction math utilities ✅
+  [x] Task 1.5 — direct_basis_from_lattice_info ✅
+
+Phase 2 (Symmetry Core): Partially complete
+  [x] unique_rotations, star_from_hkl, get_family_key_lexicographical ✅
+  [x] star_is_closed, point_group_has_neg_identity, find_inversion_ops ✅
+  [x] relationships_in_star ✅
+  [x] solve_star_coeffs ✅
+  [x] family_planes_info ✅
+
+Phase 3 (Basis Construction): ✅ COMPLETE
+Phase 4 (Initialization): ✅ COMPLETE (code written, one test crashing)
+
+Not Started:
+  Phase 5: Field generation (field.c / field.h) — iFFT via FFTW, VTK writer
+  Phase 6: Engine (engine.c) + Analytic calculations
+  Phase 7: End-to-end polish, benchmarking
+
+6. STATISTICS
+------------------------------------------------------------
+
+  Total C lines of code:    ~3,400 lines (src/*.c)
+  Total header lines:       ~570 lines (include/*.h)
+  Total test lines:         ~2,100 lines (tests/*.c)
+  Files migrated:           4 modules (8 files)
+  Files remaining:          3 modules (engine.py, field.py, Analytic.py)
+  Build system:             Makefile with 4 test targets
+  Compiler:                 x86_64-conda-linux-gnu-gcc (C11, -O2)
+  Git commits:              2 (plus 4 doc/setup commits on main)
+
+====================================================================

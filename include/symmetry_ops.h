@@ -199,20 +199,20 @@ int solve_star_coeffs(const int star[/* N */][3], int N,
  * Iteratively expands search range until N valid modes are found.
  * ======================================================================== */
 
+/* Heap-allocated family planes info (avoids ~114MB stack allocation) */
 typedef struct {
     int family_keys[MAX_MODES][3];   /* canonical HKL for each mode */
     int stars[MAX_MODES][MAX_STAR_VECTORS][3];  /* all vectors in each star */
     int star_counts[MAX_MODES];        /* how many vectors in each star */
     int count;                          /* number of valid modes found */
-    StarRelationships all_rels[MAX_MODES];
+    StarRelationships* all_rels;        /* heap-allocated array */
 } FamilyPlanesInfo;
 
-FamilyPlanesInfo family_planes_info(int N,
+FamilyPlanesInfo* family_planes_info(int N,
                                      const double Ginv[3][3],
-                                     const int rotations[/* N_rot */][3][3],
-                                     int n_rotations,
                                      const SymmGroup *sg,
                                      int dim);
+void family_planes_info_free(FamilyPlanesInfo* info);
 
 /* ========================================================================
  * Read final simulation values

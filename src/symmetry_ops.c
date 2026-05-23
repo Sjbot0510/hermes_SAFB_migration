@@ -837,30 +837,35 @@ void float_to_miller_int(const double hB[3], int max_den, double tol,
  * a simplified version that works for small N values.
  * ======================================================================== */
 
-FamilyPlanesInfo family_planes_info(int N,
+FamilyPlanesInfo* family_planes_info(int N,
                                      const double Ginv[3][3],
-                                     const int rotations[/* N_rot */][3][3],
-                                     int n_rotations,
                                      const SymmGroup *sg,
                                      int dim) {
-    FamilyPlanesInfo info;
-    memset(&info, 0, sizeof(info));
+    /* Allocate on heap to avoid ~114MB stack usage */
+    FamilyPlanesInfo* info = (FamilyPlanesInfo*)malloc(sizeof(FamilyPlanesInfo));
+    if (!info) return NULL;
+    memset(info, 0, sizeof(FamilyPlanesInfo));
+
+    info->all_rels = (StarRelationships*)calloc(MAX_MODES, sizeof(StarRelationships));
+    if (!info->all_rels) {
+        free(info);
+        return NULL;
+    }
 
     /* Build unique rotation set */
     int unique_R[MAX_OPS][3][3];
     int n_unique = unique_rotations(sg, unique_R);
 
-    int seen_keys[MAX_MODES][3];
-    (void)seen_keys;
-    int seen_qval[MAX_MODES];
-    (void)seen_qval;
-    int seen_count = 0;
-
     int current_max = 5;
     int step = 5;
     int hard_limit = 50;
+    int seen_count = 0;
 
-    /* Grid arrays */
+    /* Seen keys — track which family keys we've already accepted */
+    int seen_keys[MAX_MODES][3];
+    memset(seen_keys, 0, sizeof(seen_keys));
+
+    /* Grid arrays (heap-allocated) */
     int grid_size_max = 2000000;
     int *grid_H = (int *)malloc(sizeof(int) * grid_size_max);
     int *grid_K = (int *)malloc(sizeof(int) * grid_size_max);
@@ -960,18 +965,20 @@ FamilyPlanesInfo family_planes_info(int N,
 
             /* Store */
             int m = seen_count;
-            memcpy(info.family_keys[m], key, 3 * sizeof(int));
-            info.star_counts[m] = star_count;
-            memcpy(info.stars[m], star_buf, star_count * 3 * sizeof(int));
-            info.all_rels[m] = rels;
-            seen_qval[m] = (int)grid_q2[g];
+            memcpy(info->family_keys[m], key, 3 * sizeof(int));
+            info->star_counts[m] = star_count;
+            memcpy(info->stars[m], star_buf, star_count * 3 * sizeof(int));
+            info->all_rels[m] = rels;
+            seen_keys[m][0] = key[0];
+            seen_keys[m][1] = key[1];
+            seen_keys[m][2] = key[2];
             seen_count++;
         }
 
         current_max += step;
     }
 
-    info.count = seen_count;
+    info->count = seen_count;
 
     free(grid_H);
     free(grid_K);
@@ -979,6 +986,16 @@ FamilyPlanesInfo family_planes_info(int N,
     free(grid_q2);
 
     return info;
+}
+
+/* ========================================================================
+ * family_planes_info_free — release heap allocation
+ * ======================================================================== */
+
+void family_planes_info_free(FamilyPlanesInfo* info) {
+    if (!info) return;
+    free(info->all_rels);
+    free(info);
 }
 
 /* ========================================================================
