@@ -21,12 +21,14 @@ development setup with Python, C/C++, and research tooling.
 | GH Config | `/sandbox/gh-config-sjbot0510` |
 | Token Source | `/sandbox/secrets/sjbot0510_github_token` |
 
-### Python Packages
+### Pre-installed Packages
 
-- **Scientific**: NumPy, SciPy, SymPy, Pandas, Matplotlib
-- **Web scraping**: BeautifulSoup4, LXML
-- **Document handling**: python-docx, OpenPyXL
-- **Testing & linting**: pytest, Ruff, Black, MyPy
+- **Build/Dev:** gcc, gxx, cmake, make, gh, vim, ruff, black, mypy, pytest
+- **Scientific:** NumPy, SciPy, SymPy, Pandas, Matplotlib
+- **Web scraping:** BeautifulSoup4, LXML
+- **Document handling:** python-docx, OpenPyXL, PyMuPDF, LatexCodec
+- **Parsing:** pymupdf, pylatexenc, latexcodec, markdown, beautifulsoup4, lxml
+- **Testing & linting:** pytest, Ruff, Black, MyPy
 
 ## Quick Start
 
@@ -100,6 +102,58 @@ gh pr create            # open a PR
 └── gitconfig-sjbot0510      # Git global config
 ```
 
+## Hermes Agent Integration
+
+This sandbox runs Hermes Agent with the following capabilities:
+
+- **Self-improving skills** — persistent procedural knowledge that accumulates over sessions
+- **Multi-platform gateways** — Telegram, Discord, Slack, WhatsApp, Signal, Matrix, email, SMS, and 10+ more
+- **Provider-agnostic** — 20+ LLM providers (OpenRouter, Anthropic, OpenAI, DeepSeek, local models, etc.)
+- **Persistent memory** — cross-session recall with pluggable backends (built-in, Honcho, Mem0)
+- **Profiles** — multiple independent instances with isolated configs, sessions, and memory
+- **Cron jobs** — scheduled task execution with delivery to messaging platforms
+- **Extensible toolsets** — web, browser, terminal, file, vision, image_gen, tts, MCP, delegation, and more
+
+### Quick Start with Hermes
+
+```bash
+# Initialize environment first
+source /sandbox/setup_build.sh
+
+# Interactive chat
+hermes
+
+# Single query
+hermes chat -q "What is the capital of France?"
+
+# Check health
+hermes doctor
+
+# View/configure tools
+hermes tools
+hermes config
+
+# Skills management
+hermes skills list
+hermes skills search <query>
+hermes skills install <id>
+
+# Models and providers
+hermes model
+hermes auth add
+```
+
+### Key Paths
+
+| Path | Purpose |
+|------|---------|
+| `~/.hermes/config.yaml` | Main configuration |
+| `~/.hermes/.env` | API keys and secrets |
+| `~/.hermes/sessions/` | Session transcripts |
+| `~/.hermes/logs/` | Gateway and error logs |
+| `~/.hermes/auth.json` | OAuth tokens and credential pools |
+| `$HERMES_HOME/skills/` | Installed skills |
+
 ## Troubleshooting
 
 | Problem | Solution |
@@ -108,3 +162,7 @@ gh pr create            # open a PR
 | Conda crashes on install | Verify `CONDA_NO_PLUGINS=true` and `solver classic` |
 | GitHub auth fails | Run `source /sandbox/setup_build.sh` first |
 | CUDA-related errors | Ensure `CONDA_OVERRIDE_CUDA=""` is set |
+| Hermes tools not available | Run `hermes tools`, enable required toolsets, then `/reset` |
+| Model/provider issues | Run `hermes doctor` and check `.env` |
+| Gateway dies on SSH logout | Enable linger: `sudo loginctl enable-linger $USER` |
+| Gateway dies on WSL2 close | Add `systemd=true` to `/etc/wsl.conf` |
