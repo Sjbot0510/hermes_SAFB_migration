@@ -14,7 +14,7 @@ BUILDDIR = build
 
 # Test programs (one per module)
 # Note: e2e is not yet implemented
-TEST_NAMES = domain symmetry_ops basis initializers field
+TEST_NAMES = domain symmetry_ops basis initializers field engine
 
 .PHONY: all clean test
 
@@ -40,7 +40,10 @@ initializers: $(TESTDIR)/test_initializers.c $(SRCDIR)/domain.c $(SRCDIR)/symmet
 field: $(TESTDIR)/test_field.c $(SRCDIR)/domain.c $(SRCDIR)/symmetry_ops.c $(SRCDIR)/basis.c $(SRCDIR)/initializers.c $(SRCDIR)/field.c
 	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS)
 
-# engine, e2e — not yet implemented
+engine: $(TESTDIR)/test_engine.c $(SRCDIR)/domain.c $(SRCDIR)/symmetry_ops.c $(SRCDIR)/basis.c $(SRCDIR)/initializers.c $(SRCDIR)/field.c $(SRCDIR)/engine.c
+	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS)
+
+# e2e — not yet implemented
 
 # Run all tests
 test: all
