@@ -33,13 +33,13 @@
 ## Phase 6: Engine & Analysis
 - [x] Task 6.1: Translate `engine.c` — `SpaceGroupInitializationEngine` as procedural functions
 - [x] Task 6.2: Translate `Analytic.py` — `calculate_square_norm()` numerical version
-- [ ] Task 6.3: Translate `Analytic.py` — `derive_analytical_star_function()` simplified numerical version
-- [ ] Task 6.4: Translate `Analytic.py` — `extract_basis()` helper functions
+- [x] Task 6.3: Translate `Analytic.py` — `derive_analytical_star_function()` numerical version
+- [x] Task 6.4: Translate `Analytic.py` — `extract_basis()` helper + `analyze_star()` helper functions
 
 ## Phase 7: Polish
-- [ ] Task 7.1: Full end-to-end test: generate field for Ia-3d (gyroid) and compare with Python VTK output
-- [ ] Task 7.2: Benchmark comparison (runtime, memory)
-- [ ] Task 7.3: Documentation, examples, Makefile refinement
+- [x] Task 7.1: Full end-to-end test: generate field for Ia-3d (gyroid) and compare with Python VTK output
+- [x] Task 7.2: Benchmark comparison (runtime, memory)
+- [x] Task 7.3: Documentation, examples, Makefile refinement
 
 ## Dependencies
 
