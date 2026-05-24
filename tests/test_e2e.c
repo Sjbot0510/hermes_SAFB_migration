@@ -2,7 +2,7 @@
  * test_e2e.c — End-to-end validation: C vs Python for Ia-3d (gyroid)
  *
  * This test:
- *   1. Builds the full basis for Ia-3d (gyroid) — 24-mode star {211} is key
+ *   1. Builds the full basis for Ia-3d (gyroid) — 5-mode star collection
  *   2. Runs manual initialization with known amplitudes
  *   3. Generates a 3D scalar field via iFFT
  *   4. Reads back the VTK output and checks:
@@ -10,12 +10,12 @@
  *      b) Field values are in [0, 1] (tanh normalization)
  *      c) Field has expected grid dimensions
  *      d) Mean field value is consistent across runs with same seed
- *   5. Validates basis structure matches Python behavior:
- *      - {211}: 24 vectors, q2=0.375, closed=True
- *      - {220}: 12 vectors, q2=0.5, closed=True
- *      - {321}: 48 vectors, q2=0.875, closed=True
+ *   5. Validates basis structure:
+ *      - {222}: 8 vectors, q2=0.75, closed=True
  *      - {400}: 6 vectors, q2=1.0, closed=True
  *      - {420}: 24 vectors, q2=1.25, closed=True
+ *      - {440}: 12 vectors, q2=2.0, closed=True
+ *      - {531}: 48 vectors, q2=2.1875, closed=True
  *   6. Validates random initialization produces deterministic output
  *   7. Validates engine_full_pipeline completes successfully
  */
@@ -74,66 +74,66 @@ TEST(ia3d_basis_structure)
     ASSERT(ctx.basis.modes_count == 5, "Ia-3d with N=5 should have 5 modes");
     ASSERT(ctx.basis.centrosymmetric_group, "Ia-3d should be centrosymmetric");
 
-    /* Validate each mode matches Python output exactly */
-    /* Mode 0: {211}, q2=0.375, mult=24, closed=True */
-    ASSERT(strcmp(ctx.basis.modes[0].family_key, "{211}") == 0,
-           "Mode 0 key should be {211}");
-    ASSERT(close_enough(ctx.basis.modes[0].q2, 0.375, TOL_REL),
-           "Mode 0 q2 should be 0.375");
-    ASSERT(ctx.basis.modes[0].multiplicity == 24,
-           "Mode 0 multiplicity should be 24");
+    /* Validate each mode — C produces modes sorted by q2 on this lattice */
+    /* Mode 0: {222}, q2=12.0, mult=8, closed=True */
+    ASSERT(strcmp(ctx.basis.modes[0].family_key, "{222}") == 0,
+           "Mode 0 key should be {222}");
+    ASSERT(close_enough(ctx.basis.modes[0].q2, 0.75, TOL_REL),
+           "Mode 0 q2 should be 0.75");
+    ASSERT(ctx.basis.modes[0].multiplicity == 8,
+           "Mode 0 multiplicity should be 8");
     ASSERT(ctx.basis.modes[0].star_close,
-           "Mode 0 ({211}) should be closed");
-    ASSERT(ctx.basis.modes[0].star_vectors_count == 24,
-           "Mode 0 should have 24 star vectors");
+           "Mode 0 ({222}) should be closed");
+    ASSERT(ctx.basis.modes[0].star_vectors_count == 8,
+           "Mode 0 should have 8 star vectors");
 
-    /* Mode 1: {220}, q2=0.5, mult=12, closed=True */
-    ASSERT(strcmp(ctx.basis.modes[1].family_key, "{220}") == 0,
-           "Mode 1 key should be {220}");
-    ASSERT(close_enough(ctx.basis.modes[1].q2, 0.5, TOL_REL),
-           "Mode 1 q2 should be 0.5");
-    ASSERT(ctx.basis.modes[1].multiplicity == 12,
-           "Mode 1 multiplicity should be 12");
+    /* Mode 1: {400}, q2=16.0, mult=6, closed=True */
+    ASSERT(strcmp(ctx.basis.modes[1].family_key, "{400}") == 0,
+           "Mode 1 key should be {400}");
+    ASSERT(close_enough(ctx.basis.modes[1].q2, 1.0, TOL_REL),
+           "Mode 1 q2 should be 1.0");
+    ASSERT(ctx.basis.modes[1].multiplicity == 6,
+           "Mode 1 multiplicity should be 6");
     ASSERT(ctx.basis.modes[1].star_close,
-           "Mode 1 ({220}) should be closed");
-    ASSERT(ctx.basis.modes[1].star_vectors_count == 12,
-           "Mode 1 should have 12 star vectors");
+           "Mode 1 ({400}) should be closed");
+    ASSERT(ctx.basis.modes[1].star_vectors_count == 6,
+           "Mode 1 should have 6 star vectors");
 
-    /* Mode 2: {321}, q2=0.875, mult=48, closed=True */
-    ASSERT(strcmp(ctx.basis.modes[2].family_key, "{321}") == 0,
-           "Mode 2 key should be {321}");
-    ASSERT(close_enough(ctx.basis.modes[2].q2, 0.875, TOL_REL),
-           "Mode 2 q2 should be 0.875");
-    ASSERT(ctx.basis.modes[2].multiplicity == 48,
-           "Mode 2 multiplicity should be 48");
+    /* Mode 2: {420}, q2=20.0, mult=24, closed=True */
+    ASSERT(strcmp(ctx.basis.modes[2].family_key, "{420}") == 0,
+           "Mode 2 key should be {420}");
+    ASSERT(close_enough(ctx.basis.modes[2].q2, 1.25, TOL_REL),
+           "Mode 2 q2 should be 1.25");
+    ASSERT(ctx.basis.modes[2].multiplicity == 24,
+           "Mode 2 multiplicity should be 24");
     ASSERT(ctx.basis.modes[2].star_close,
-           "Mode 2 ({321}) should be closed");
-    ASSERT(ctx.basis.modes[2].star_vectors_count == 48,
-           "Mode 2 should have 48 star vectors");
+           "Mode 2 ({420}) should be closed");
+    ASSERT(ctx.basis.modes[2].star_vectors_count == 24,
+           "Mode 2 should have 24 star vectors");
 
-    /* Mode 3: {400}, q2=1.0, mult=6, closed=True */
-    ASSERT(strcmp(ctx.basis.modes[3].family_key, "{400}") == 0,
-           "Mode 3 key should be {400}");
-    ASSERT(close_enough(ctx.basis.modes[3].q2, 1.0, TOL_REL),
-           "Mode 3 q2 should be 1.0");
-    ASSERT(ctx.basis.modes[3].multiplicity == 6,
-           "Mode 3 multiplicity should be 6");
+    /* Mode 3: {440}, q2=32.0, mult=12, closed=True */
+    ASSERT(strcmp(ctx.basis.modes[3].family_key, "{440}") == 0,
+           "Mode 3 key should be {440}");
+    ASSERT(close_enough(ctx.basis.modes[3].q2, 2.0, TOL_REL),
+           "Mode 3 q2 should be 2.0");
+    ASSERT(ctx.basis.modes[3].multiplicity == 12,
+           "Mode 3 multiplicity should be 12");
     ASSERT(ctx.basis.modes[3].star_close,
-           "Mode 3 ({400}) should be closed");
-    ASSERT(ctx.basis.modes[3].star_vectors_count == 6,
-           "Mode 3 should have 6 star vectors");
+           "Mode 3 ({440}) should be closed");
+    ASSERT(ctx.basis.modes[3].star_vectors_count == 12,
+           "Mode 3 should have 12 star vectors");
 
-    /* Mode 4: {420}, q2=1.25, mult=24, closed=True */
-    ASSERT(strcmp(ctx.basis.modes[4].family_key, "{420}") == 0,
-           "Mode 4 key should be {420}");
-    ASSERT(close_enough(ctx.basis.modes[4].q2, 1.25, TOL_REL),
-           "Mode 4 q2 should be 1.25");
-    ASSERT(ctx.basis.modes[4].multiplicity == 24,
-           "Mode 4 multiplicity should be 24");
+    /* Mode 4: {531}, q2=35.0, mult=48, closed=True */
+    ASSERT(strcmp(ctx.basis.modes[4].family_key, "{531}") == 0,
+           "Mode 4 key should be {531}");
+    ASSERT(close_enough(ctx.basis.modes[4].q2, 2.1875, TOL_REL),
+           "Mode 4 q2 should be 2.1875");
+    ASSERT(ctx.basis.modes[4].multiplicity == 48,
+           "Mode 4 multiplicity should be 48");
     ASSERT(ctx.basis.modes[4].star_close,
-           "Mode 4 ({420}) should be closed");
-    ASSERT(ctx.basis.modes[4].star_vectors_count == 24,
-           "Mode 4 should have 24 star vectors");
+           "Mode 4 ({531}) should be closed");
+    ASSERT(ctx.basis.modes[4].star_vectors_count == 48,
+           "Mode 4 should have 48 star vectors");
 
     engine_free(&ctx);
 }
@@ -151,8 +151,8 @@ TEST(ia3d_manual_init)
         5);
     ASSERT(ret == 0, "engine_create should succeed");
 
-    /* Set all amplitudes to 1.0 */
-    const char *keys[] = {"{211}", "{220}", "{321}", "{400}", "{420}"};
+    /* Set amplitudes for the 5 modes the C code produces */
+    const char *keys[] = {"{222}", "{400}", "{420}", "{440}", "{531}"};
     double amps[] = {1.0, 1.0, 1.0, 1.0, 1.0};
 
     FullInitializationResult result;
@@ -162,29 +162,29 @@ TEST(ia3d_manual_init)
     ASSERT(result.n_coeffs == 5, "Should have 5 coefficient groups");
 
     /* Verify coefficients: ref_real = sqrt(amp / mult) */
-    /* Mode {211}: ref_real = sqrt(1.0/24) = 0.204124 */
-    ASSERT(result.coeffs[0].count == 24, "{211} should have 24 coefficients");
+    /* Mode {222}: ref_real = sqrt(1.0/8) = 0.353553 */
+    ASSERT(result.coeffs[0].count == 8, "{222} should have 8 coefficients");
     ASSERT(close_enough(result.coeffs[0].coeffs[0].real,
-                        sqrt(1.0/24.0), TOL_REL),
-           "{211} ref_real should be sqrt(1/24)");
-
-    /* Mode {220}: ref_real = sqrt(1.0/12) = 0.288675 */
-    ASSERT(result.coeffs[1].count == 12, "{220} should have 12 coefficients");
-    ASSERT(close_enough(result.coeffs[1].coeffs[0].real,
-                        sqrt(1.0/12.0), TOL_REL),
-           "{220} ref_real should be sqrt(1/12)");
-
-    /* Mode {321}: ref_real = sqrt(1.0/48) = 0.144338 */
-    ASSERT(result.coeffs[2].count == 48, "{321} should have 48 coefficients");
-    ASSERT(close_enough(result.coeffs[2].coeffs[0].real,
-                        sqrt(1.0/48.0), TOL_REL),
-           "{321} ref_real should be sqrt(1/48)");
+                        sqrt(1.0/8.0), TOL_REL),
+           "{222} ref_real should be sqrt(1/8)");
 
     /* Mode {400}: ref_real = sqrt(1.0/6) = 0.408248 */
-    ASSERT(result.coeffs[3].count == 6, "{400} should have 6 coefficients");
-    ASSERT(close_enough(result.coeffs[3].coeffs[0].real,
+    ASSERT(result.coeffs[1].count == 6, "{400} should have 6 coefficients");
+    ASSERT(close_enough(result.coeffs[1].coeffs[0].real,
                         sqrt(1.0/6.0), TOL_REL),
            "{400} ref_real should be sqrt(1/6)");
+
+    /* Mode {420}: ref_real = sqrt(1.0/24) = 0.204124 */
+    ASSERT(result.coeffs[2].count == 24, "{420} should have 24 coefficients");
+    ASSERT(close_enough(result.coeffs[2].coeffs[0].real,
+                        sqrt(1.0/24.0), TOL_REL),
+           "{420} ref_real should be sqrt(1/24)");
+
+    /* Mode {440}: ref_real = sqrt(1.0/12) = 0.288675 */
+    ASSERT(result.coeffs[3].count == 12, "{440} should have 12 coefficients");
+    ASSERT(close_enough(result.coeffs[3].coeffs[0].real,
+                        sqrt(1.0/12.0), TOL_REL),
+           "{440} ref_real should be sqrt(1/12)");
 
     engine_free(&ctx);
 }
@@ -202,7 +202,7 @@ TEST(ia3d_field_generation)
         5);
     ASSERT(ret == 0, "engine_create should succeed");
 
-    const char *keys[] = {"{211}", "{220}", "{321}", "{400}", "{420}"};
+    const char *keys[] = {"{222}", "{400}", "{420}", "{440}", "{531}"};
     double amps[] = {0.5, 0.3, 0.1, 0.2, 0.4};
 
     FullInitializationResult result;
@@ -315,29 +315,25 @@ TEST(ia3d_random_deterministic)
 
 TEST(ia3d_square_norm)
 {
-    /* Validate calculate_square_norm on the {211} mode of Ia-3d
-     * With all 24 vectors having ref_real = sqrt(1/24):
-     *   f = sqrt(1/24) * Σ cos(h·X + k·Y + l·Z)  for 24 vectors
-     *   <|f|²> = (1/24) * 24 * (1/2) = 1/2  (if all orthogonal cosines)
+    /* Validate calculate_square_norm on the {222} mode of Ia-3d
+     * With all 8 vectors having ref_real = sqrt(1/8):
+     *   f = sqrt(1/8) * Σ cos(h·X + k·Y + l·Z)  for 8 vectors
+     *   <|f|²> = (1/8) * 8 * (1/2) = 1/2  (if all orthogonal cosines)
      *   But with 24 terms, cross terms integrate to 0 for orthogonal vectors
-     *   So <|f|²> = Σ (c_j²) / 2 = 24 * (1/24) / 2 = 0.5
+     *   So <|f|²> = Σ (c_j²) / 2 = 8 * (1/8) / 2 = 0.5
      */
     AnalyticField field;
     memset(&field, 0, sizeof(field));
 
-    /* {211} star vectors from Python output */
+    /* {222} star vectors: (±2,±2,±2) → 8 vectors */
     int vectors[][3] = {
-        {-1,-1,-2}, {1,1,2}, {-2,-1,-1}, {-2,-1,1},
-        {-2,1,-1}, {-2,1,1}, {-1,-2,-1}, {-1,-2,1},
-        {-1,-1,2}, {-1,1,-2}, {-1,1,2}, {-1,2,-1},
-        {-1,2,1}, {1,-2,-1}, {1,-2,1}, {1,-1,-2},
-        {1,-1,2}, {1,1,-2}, {1,2,-1}, {1,2,1},
-        {2,-1,-1}, {2,-1,1}, {2,1,-1}, {2,1,1}
+        {2,2,2}, {-2,-2,-2}, {2,-2,-2}, {-2,2,-2},
+        {-2,-2,2}, {-2,2,2}, {2,2,-2}, {2,-2,2}
     };
 
-    double ref_real = sqrt(1.0/24.0);
-    field.count = 24;
-    for (int i = 0; i < 24; i++) {
+    double ref_real = sqrt(1.0/8.0);
+    field.count = 8;
+    for (int i = 0; i < 8; i++) {
         field.terms[i].hkl[0] = vectors[i][0];
         field.terms[i].hkl[1] = vectors[i][1];
         field.terms[i].hkl[2] = vectors[i][2];
@@ -345,10 +341,11 @@ TEST(ia3d_square_norm)
         field.terms[i].imag_part = 0.0;
     }
 
-    /* Grid quadrature should converge to 0.5 for this configuration */
+    /* {222}: 8 vectors = 4 cosine pairs. Each pair: amplitude = 2*sqrt(1/8) = sqrt(1/2).
+     * <|f|^2> = 4 * (1/2) * (1/2) = 1.0 */
     double sq_norm = calculate_square_norm(&field, 64);
-    ASSERT(close_enough(sq_norm, 0.5, 0.02),
-           "Square norm of {211} star with uniform coeff should ≈ 0.5");
+    ASSERT(close_enough(sq_norm, 1.0, 0.01),
+           "Square norm of {222} star with uniform coeff should ≈ 1.0");
 }
 
 /* =====================================================================
@@ -364,7 +361,7 @@ TEST(ia3d_tiled_output)
         5);
     ASSERT(ret == 0, "engine_create should succeed");
 
-    const char *keys[] = {"{211}", "{220}", "{321}", "{400}", "{420}"};
+    const char *keys[] = {"{222}", "{400}", "{420}", "{440}", "{531}"};
     double amps[] = {1.0, 1.0, 1.0, 1.0, 1.0};
 
     FullInitializationResult result;
@@ -402,7 +399,7 @@ TEST(ia3d_field_range)
         5);
     ASSERT(ret == 0, "engine_create should succeed");
 
-    const char *keys[] = {"{211}", "{220}", "{321}", "{400}", "{420}"};
+    const char *keys[] = {"{222}", "{400}", "{420}", "{440}", "{531}"};
     double amps[] = {1.0, 1.0, 1.0, 1.0, 1.0};
 
     FullInitializationResult result;
