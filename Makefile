@@ -15,7 +15,10 @@ BUILDDIR = build
 # Test programs (one per module)
 TEST_NAMES = domain symmetry_ops basis initializers field engine analytic e2e python_compare
 
-.PHONY: all clean test
+# Benchmark
+BENCHMARK = benchmark
+
+.PHONY: all clean test benchmark
 
 all: $(TEST_NAMES)
 
@@ -49,6 +52,10 @@ e2e: $(TESTDIR)/test_e2e.c $(SRCDIR)/domain.c $(SRCDIR)/symmetry_ops.c $(SRCDIR)
 	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS)
 
 python_compare: $(TESTDIR)/test_python_compare.c $(SRCDIR)/domain.c $(SRCDIR)/symmetry_ops.c $(SRCDIR)/basis.c $(SRCDIR)/initializers.c $(SRCDIR)/field.c $(SRCDIR)/engine.c $(SRCDIR)/analytic.c
+	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS)
+
+# Benchmark
+benchmark: $(TESTDIR)/benchmark.c $(SRCDIR)/domain.c $(SRCDIR)/symmetry_ops.c $(SRCDIR)/basis.c $(SRCDIR)/initializers.c $(SRCDIR)/field.c $(SRCDIR)/engine.c $(SRCDIR)/analytic.c
 	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS)
 
 # Run all tests
