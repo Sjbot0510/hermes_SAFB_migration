@@ -157,10 +157,16 @@ SymmGroup read_spacegroup_ops_txt(const char *path) {
         }
     }
 
-    /* Tokenize all lines into data_rows */
-    char *tokens[8192][6];
+    /* Tokenize all lines into data_rows — heap-allocate to avoid stack overflow */
+    char (*token_storage)[6][256] = malloc(sizeof(*token_storage) * num_lines);
+    if (!token_storage) {
+        /* f already closed on line 147 */
+        for (int i = 0; i < num_lines; i++) free(all_lines[i]);
+        memset(&sg, 0, sizeof(sg));
+        return sg;
+    }
     int token_counts[8192];
-    (void)token_counts;
+    memset(token_counts, 0, sizeof(token_counts));
     int num_data_rows = 0;
 
     for (int i = 0; i < num_lines; i++) {
@@ -175,10 +181,12 @@ SymmGroup read_spacegroup_ops_txt(const char *path) {
         int ncols = 0;
         char *tok = strtok(tmp, " \t");
         while (tok && ncols < 6) {
-            tokens[num_data_rows][ncols] = tok;
+            strncpy(token_storage[num_data_rows][ncols], tok, 255);
+            token_storage[num_data_rows][ncols][255] = '\0';
             ncols++;
             tok = strtok(NULL, " \t");
         }
+        token_counts[num_data_rows] = ncols;
         if (ncols >= 2) num_data_rows++;
     }
 
@@ -193,7 +201,7 @@ SymmGroup read_spacegroup_ops_txt(const char *path) {
         memset(R, 0, sizeof(R));
         for (int r = 0; r < nR; r++) {
             for (int c = 0; c < sg.dim; c++) {
-                R[r][c] = atoi(tokens[i + r][c]);
+                R[r][c] = atoi(token_storage[i + r][c]);
             }
         }
         /* Fill in the 3rd row/col for 2D embedding */
@@ -208,7 +216,7 @@ SymmGroup read_spacegroup_ops_txt(const char *path) {
         /* Parse translation vector */
         Fraction t[3];
         for (int c = 0; c < sg.dim; c++) {
-            t[c] = parse_frac_token(tokens[i + nR][c]);
+            t[c] = parse_frac_token(token_storage[i + nR][c]);
         }
         t[2] = frac_new(0, 1); /* z = 0 for 2D */
 
@@ -221,8 +229,9 @@ SymmGroup read_spacegroup_ops_txt(const char *path) {
         sg.count++;
     }
 
-    /* Free line buffers */
+    /* Free line buffers and token storage */
     for (int i = 0; i < num_lines; i++) free(all_lines[i]);
+    free(token_storage);
 
     return sg;
 }

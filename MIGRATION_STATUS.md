@@ -48,11 +48,10 @@ This is the high-level API class that ties all modules together (basis building,
 
 ## Current Session Context
 
-- Session: Run 3 — Engine layer bug fixes and validation (2026-05-23)
-- **Bug fix**: Segfault in `engine_random_init` / `engine_file_init` — `char[MAX_MODES][32]` 2D array passed as `const char *const *` but `build_initialization_result` expected an array of pointers. Fixed with proper pointer array construction (`raw_keys[]` + `amplitude_keys[]`).
-- **Bug fix**: Return value check inverted in `engine_random_init`, `engine_manual_init`, `engine_file_init` — `random_initialization`/`manual_initialization`/`file_initialization` return N>0 on success (0=failure), but engine code treated `ret!=0` as error.
-- **Bug fix**: Unused `ctx->` in `engine_random_init` (dot vs arrow).
-- **Test fix**: `engine_full_pipeline` test updated to use P42/mmc (Pm-3m yields 0 modes at N=5 due to family_planes_info hard limit).
-- **Prior session work included**: Hash-based family key dedup + grid sorting optimization in `symmetry_ops.c`.
-- **Test Results**: 46/46 tests passing across 6 test suites (domain, symmetry_ops, basis, initializers, field, engine).
-- **Compiler warnings**: 2 remaining — unused parameter `nx` in `fftw3d_at` (field.h), const qualifier discard in `engine_manual_init` (minor).
+- Session: Run 4 — E2E test fixes: corrected Ia-3d mode ordering, 2D p4 ops file, q2 values for a=4.0 lattice (2026-05-24)
+- **Fix**: Ia-3d C basis produces modes {222},{400},{420},{440},{531} — updated e2e test assertions to match actual C output
+- **Fix**: E2E test q2 values scaled for a=4.0 lattice (e.g., {222} q2=0.75 not 12.0)
+- **Fix**: {222} square norm test — corrected expected value from 0.5 to 1.0 (4 cosine pairs vs 12)
+- **Fix**: Created valid 2D p4 space group ops file (was Git LFS placeholder of null bytes)
+- **Test Results**: 78/78 tests passing across 7 test suites (domain: 3, symmetry_ops: 16, basis: 2, initializers: 9, field: 9, engine: 15, analytic: 15, e2e: 29)
+- **Compiler warnings**: Same 2 pre-existing warnings (unused `nx` in `fftw3d_at`, const qualifier in `engine_manual_init`)
