@@ -95,15 +95,26 @@ Factory: `LatticeInfo.from_2d(a, b, gamma)` → `lattice_info_new_2d(a, b, gamma
 
 ## engine.py Class
 
-| Python | C Target |
-|---|---|
-| `SpaceGroupInitializationEngine.__init__()` | `engine_init()` |
-| `build_basis(N)` | `engine_build_basis()` |
-| `init_random(...)` | `engine_init_random()` |
-| `init_manual(amplitudes)` | `engine_init_manual()` |
-| `init_from_file(filename, ...)` | `engine_init_from_file()` |
-| `transform_lattice_coordinate(...)` | `engine_transform_lattice()` |
-| `Output_field(...)` | `engine_output_field()` |
+### Engine Context
+| Python | C Target | Status |
+|---|---|---|
+| `SpaceGroupInitializationEngine.__init__()` | `engine_create()` | ✅ Complete |
+| (none — destructor) | `engine_free()` | ✅ Complete |
+
+### Engine Methods
+| Python | C Target | Status |
+|---|---|---|
+| `build_basis(N)` | `engine_build_basis()` | ✅ Complete |
+| `init_random(distribution, dist_params, rng)` | `engine_random_init()` | ✅ Complete |
+| `init_manual(amplitudes)` | `engine_manual_init()` | ✅ Complete |
+| `init_from_file(filename, read_lattice_info, P)` | `engine_file_init()` | ✅ Complete |
+| `transform_lattice_coordinate(lattice_A, P, result)` | `engine_transform_miller()` | ✅ Complete |
+| `Output_field(filename, field_name, apply_tile, tile, result, resol, transform_coord)` | `engine_output_field()` | ✅ Complete |
+
+### Pipeline Convenience
+| Python | C Target | Status |
+|---|---|---|
+| (none — convenience wrapper) | `engine_full_pipeline()` | ✅ Complete |
 
 ## initializers.py Classes
 

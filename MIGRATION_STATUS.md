@@ -29,6 +29,7 @@ Migration of `/sandbox/Sg_init` (Python SAFB) to `/sandbox/hermes_SAFB_migration
 | 5.2 Coefficient placement on grid | ✅ COMPLETE | Map FamilyCoeffs onto 3D complex grid |
 | 5.3 iFFT (Cooley-Tukey + DFT fallback) | ✅ COMPLETE | 3D inverse FFT, tanh normalization |
 | 5.4 VTK `.vts` XML writer | ✅ COMPLETE | ASCII VTK StructuredGrid export |
+| 6.1 `engine.c` — SpaceGroupInitializationEngine | ✅ COMPLETE | engine_create, engine_free, engine_build_basis, engine_random_init, engine_manual_init, engine_file_init, engine_transform_miller, engine_output_field, engine_full_pipeline — with bug fixes (pointer array segfault, inverted return checks) |
 
 ### Phase 6-7: Not Started
 
@@ -46,8 +47,11 @@ This is the high-level API class that ties all modules together (basis building,
 
 ## Current Session Context
 
-- Session: Initial setup (Session 1)
-- Python project fully inspected
-- All 6 core modules analyzed
-- Documentation created: AGENTS.md, MIGRATION_PLAN.md, PYTHON_REFERENCE_MAP.md, VALIDATION_PLAN.md
-- C project skeleton created with Makefile build system
+- Session: Run 3 — Engine layer bug fixes and validation (2026-05-23)
+- **Bug fix**: Segfault in `engine_random_init` / `engine_file_init` — `char[MAX_MODES][32]` 2D array passed as `const char *const *` but `build_initialization_result` expected an array of pointers. Fixed with proper pointer array construction (`raw_keys[]` + `amplitude_keys[]`).
+- **Bug fix**: Return value check inverted in `engine_random_init`, `engine_manual_init`, `engine_file_init` — `random_initialization`/`manual_initialization`/`file_initialization` return N>0 on success (0=failure), but engine code treated `ret!=0` as error.
+- **Bug fix**: Unused `ctx->` in `engine_random_init` (dot vs arrow).
+- **Test fix**: `engine_full_pipeline` test updated to use P42/mmc (Pm-3m yields 0 modes at N=5 due to family_planes_info hard limit).
+- **Prior session work included**: Hash-based family key dedup + grid sorting optimization in `symmetry_ops.c`.
+- **Test Results**: 46/46 tests passing across 6 test suites (domain, symmetry_ops, basis, initializers, field, engine).
+- **Compiler warnings**: 2 remaining — unused parameter `nx` in `fftw3d_at` (field.h), const qualifier discard in `engine_manual_init` (minor).
