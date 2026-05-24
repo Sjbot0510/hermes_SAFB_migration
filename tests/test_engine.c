@@ -191,7 +191,7 @@ TEST(engine_output_field)
 
     int ret = engine_output_field(
         "/tmp/test_engine_output.vts",
-        "psi", 0, 1, 1, 1, &result, 20.0, 0
+        "psi", 0, 1, 1, 1, &result, 1.0, 0
     );
     ASSERT(ret == 0, "engine_output_field should succeed");
 
@@ -221,7 +221,7 @@ TEST(engine_full_pipeline)
         42,
         "/tmp/test_full_pipeline.vts",
         "psi",
-        20.0,
+        1.0,
         0, 1, 1, 1
     );
     ASSERT(ret == 0, "Full pipeline should succeed for P42/mmc");

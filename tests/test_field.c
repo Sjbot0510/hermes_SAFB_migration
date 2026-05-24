@@ -5,6 +5,7 @@
  *   - 1D/3D inverse FFT
  *   - VTK XML writer
  *   - build_field coefficient placement + iFFT + normalization
+ *   - freqf_int grid frequency construction
  */
 
 #include <stdio.h>
@@ -12,6 +13,7 @@
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
+#include <fftw3.h>
 #include "field.h"
 #include "initializers.h"
 #include "basis.h"
@@ -20,88 +22,105 @@
 #define EPS_COARSE 1e-5
 
 /* ========================================================================
- * Test: 1D FFT/IDFT round-trip
+ * Test: 1D FFT/IDFT round-trip using FFTW
  * ======================================================================== */
 
 static void test_fft_1d_roundtrip(void) {
-    /* Unnormalized convention: forward+inverse = N * original.
-     * Verify by dividing the result by N. */
     printf("  Testing 1D FFT round-trip (N=8, power-of-2)...\n");
     {
-        ComplexDouble data[8];
+        fftw_complex* data = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * 8);
+        fftw_complex* saved = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * 8);
         for (int i = 0; i < 8; i++) {
-            data[i].real = (double)(i + 1);
-            data[i].imag = 0;
+            data[i][0] = (double)(i + 1);
+            data[i][1] = 0;
+            saved[i][0] = data[i][0];
+            saved[i][1] = data[i][1];
         }
-        ComplexDouble saved[8];
-        memcpy(saved, data, sizeof(data));
 
-        fft_1d(data, 8, 1);   /* forward DFT (no normalization) */
-        fft_1d(data, 8, -1);  /* inverse DFT (no normalization) */
-        /* Now data[i] = N * saved[i] */
-        double inv_n = 1.0 / 8.0;
+        fftw_plan fwd = fftw_plan_dft_1d(8, data, data, FFTW_FORWARD, FFTW_ESTIMATE);
+        fftw_plan bwd = fftw_plan_dft_1d(8, data, data, FFTW_BACKWARD, FFTW_ESTIMATE);
+        fftw_execute(fwd);
+        fftw_execute(bwd);
+        /* N * saved */
         for (int i = 0; i < 8; i++) {
-            data[i].real *= inv_n;
-            data[i].imag *= inv_n;
+            data[i][0] /= 8.0;
+            data[i][1] /= 8.0;
         }
         for (int i = 0; i < 8; i++) {
-            assert(fabs(data[i].real - saved[i].real) < EPS);
-            assert(fabs(data[i].imag - saved[i].imag) < EPS);
+            assert(fabs(data[i][0] - saved[i][0]) < EPS);
+            assert(fabs(data[i][1] - saved[i][1]) < EPS);
         }
+        fftw_destroy_plan(fwd);
+        fftw_destroy_plan(bwd);
+        fftw_free(data);
+        fftw_free(saved);
         printf("    [PASS] 1D FFT round-trip (N=8)\n");
     }
 
     printf("  Testing 1D FFT round-trip (N=6, non-power-of-2)...\n");
     {
-        ComplexDouble data[6];
+        fftw_complex* data = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * 6);
+        fftw_complex* saved = (fftw_complex*)fftw_malloc(sizeof(fftw_complex) * 6);
         for (int i = 0; i < 6; i++) {
-            data[i].real = (double)(i + 1);
-            data[i].imag = 0;
+            data[i][0] = (double)(i + 1);
+            data[i][1] = 0;
+            saved[i][0] = data[i][0];
+            saved[i][1] = data[i][1];
         }
-        ComplexDouble saved[6];
-        memcpy(saved, data, sizeof(data));
 
-        fft_1d(data, 6, 1);   /* forward DFT */
-        fft_1d(data, 6, -1);  /* inverse DFT */
-        double inv_n = 1.0 / 6.0;
+        fftw_plan fwd = fftw_plan_dft_1d(6, data, data, FFTW_FORWARD, FFTW_ESTIMATE);
+        fftw_plan bwd = fftw_plan_dft_1d(6, data, data, FFTW_BACKWARD, FFTW_ESTIMATE);
+        fftw_execute(fwd);
+        fftw_execute(bwd);
+        /* N * saved */
         for (int i = 0; i < 6; i++) {
-            data[i].real *= inv_n;
-            data[i].imag *= inv_n;
+            data[i][0] /= 6.0;
+            data[i][1] /= 6.0;
         }
         for (int i = 0; i < 6; i++) {
-            assert(fabs(data[i].real - saved[i].real) < EPS);
-            assert(fabs(data[i].imag - saved[i].imag) < EPS);
+            assert(fabs(data[i][0] - saved[i][0]) < EPS);
+            assert(fabs(data[i][1] - saved[i][1]) < EPS);
         }
+        fftw_destroy_plan(fwd);
+        fftw_destroy_plan(bwd);
+        fftw_free(data);
+        fftw_free(saved);
         printf("    [PASS] 1D FFT round-trip (N=6)\n");
     }
 }
 
 /* ========================================================================
- * Test: 3D FFT — known transform
+ * Test: 3D FFT using field API
  * ======================================================================== */
 
 static void test_fftn3d_simple(void) {
     printf("  Testing 3D FFT simple (3x3x3)...\n");
 
     int Na = 3, Nb = 3, Nc = 3;
-    ComplexDouble* Wa = fftw3d_alloc(Na, Nb, Nc);
-    memset(Wa, 0, sizeof(ComplexDouble) * (size_t)(Na * Nb * Nc));
 
-    /* Place a single coefficient at (0,0,0) — should give constant field */
-    ComplexDouble* target = fftw3d_at(Wa, Na, Nb, Nc, 0, 0, 0);
-    target->real = 1.0;
-    target->imag = 0.0;
+    /* Place DC coefficient */
+    fftw_complex* Wa = (fftw_complex*)fftw_alloc_complex((size_t)Na * Nb * Nc);
+    memset(Wa, 0, sizeof(fftw_complex) * (size_t)(Na * Nb * Nc));
+    Wa[0][0] = 1.0;  /* DC coefficient */
 
-    fftn3d_idft(Wa, Na, Nb, Nc);
+    /* Create FFTW plan, feed in, run, read out */
+    void* plan = field_create_fftw_plan(Na, Nb, Nc);
+    assert(plan != NULL);
+    fftw_complex* in = (fftw_complex*)field_get_fftw_input(plan);
+    memcpy(in, Wa, sizeof(fftw_complex) * (size_t)(Na * Nb * Nc));
+    field_run_fftw(plan);
+    fftw_complex* out = (fftw_complex*)field_get_fftw_output(plan);
 
-    /* After iFFT with coefficient 1 at DC: field = 1/(Na*Nb*Nc) everywhere */
-    double expected = 1.0 / ((double)Na * (double)Nb * (double)Nc);
+    /* FFTW BACKWARD is unnormalized: result = N * ifftn */
+    double N = (double)Na * (double)Nb * (double)Nc;
+    double expected = 1.0 / N;
     for (int i = 0; i < Na * Nb * Nc; i++) {
-        assert(fabs(Wa[i].real - expected) < EPS);
-        assert(fabs(Wa[i].imag) < EPS);
+        assert(fabs(out[i][0] / N - expected) < EPS);
+        assert(fabs(out[i][1]) < EPS);
     }
 
-    fftw3d_free(Wa);
+    field_destroy_fftw_plan(plan);
+    fftw_free(Wa);
     printf("    [PASS] 3D FFT single DC coefficient\n");
 }
 
@@ -109,24 +128,27 @@ static void test_fftn3d_2x2x1(void) {
     printf("  Testing 3D FFT (2x2x1)...\n");
 
     int Na = 2, Nb = 2, Nc = 1;
-    ComplexDouble* Wa = fftw3d_alloc(Na, Nb, Nc);
-    memset(Wa, 0, sizeof(ComplexDouble) * (size_t)(Na * Nb * Nc));
 
-    /* Place coefficient 2.0 at DC */
-    ComplexDouble* target = fftw3d_at(Wa, Na, Nb, Nc, 0, 0, 0);
-    target->real = 2.0;
-    target->imag = 0.0;
+    fftw_complex* Wa = (fftw_complex*)fftw_alloc_complex((size_t)Na * Nb * Nc);
+    memset(Wa, 0, sizeof(fftw_complex) * (size_t)(Na * Nb * Nc));
+    Wa[0][0] = 2.0;  /* DC coefficient */
 
-    fftn3d_idft(Wa, Na, Nb, Nc);
+    void* plan = field_create_fftw_plan(Na, Nb, Nc);
+    assert(plan != NULL);
+    fftw_complex* in = (fftw_complex*)field_get_fftw_input(plan);
+    memcpy(in, Wa, sizeof(fftw_complex) * (size_t)(Na * Nb * Nc));
+    field_run_fftw(plan);
+    fftw_complex* out = (fftw_complex*)field_get_fftw_output(plan);
+    double N = (double)Na * (double)Nb * (double)Nc;
 
-    /* After iFFT with coefficient 2: field = 2/(2*2*1) = 0.5 everywhere */
     double expected = 2.0 / ((double)Na * (double)Nb * (double)Nc);
     for (int i = 0; i < Na * Nb * Nc; i++) {
-        assert(fabs(Wa[i].real - expected) < EPS_COARSE);
-        assert(fabs(Wa[i].imag) < EPS_COARSE);
+        assert(fabs(out[i][0] / N - expected) < EPS_COARSE);
+        assert(fabs(out[i][1]) < EPS_COARSE);
     }
 
-    fftw3d_free(Wa);
+    field_destroy_fftw_plan(plan);
+    fftw_free(Wa);
     printf("    [PASS] 3D FFT 2x2x1\n");
 }
 
@@ -139,8 +161,6 @@ static void test_freqf_int(void) {
 
     int freq6[6];
     freqf_int(6, freq6);
-    /* Expected: [0, 1, 2, -3, -2, -1] for fftfreq(6) */
-    /* Python: fftfreq(6, 1.0/6) = [0, 1, 2, -3, -2, -1] */
     assert(freq6[0] == 0);
     assert(freq6[1] == 1);
     assert(freq6[2] == 2);
@@ -150,7 +170,6 @@ static void test_freqf_int(void) {
 
     int freq5[5];
     freqf_int(5, freq5);
-    /* Expected: [0, 1, 2, -2, -1] */
     assert(freq5[0] == 0);
     assert(freq5[1] == 1);
     assert(freq5[2] == 2);
@@ -200,7 +219,7 @@ static void test_vtk_writer(void) {
     assert(has_data);
     assert(has_scalar);
 
-    /* Verify field value is in the file (written as %22.15e scientific notation) */
+    /* Verify field value is in the file */
     f = fopen(filename, "r");
     char* result = (char*)malloc(65536);
     memset(result, 0, 65536);
@@ -210,8 +229,6 @@ static void test_vtk_writer(void) {
 
     free(result);
     free(field);
-
-    /* Clean up */
     remove(filename);
 
     printf("    [PASS] VTK writer\n");
@@ -224,7 +241,6 @@ static void test_vtk_writer(void) {
 static void test_build_field_simple(void) {
     printf("  Testing build_field with P1 basis (2x2x1)...\n");
 
-    /* Build P1 basis */
     SymmGroup sg;
     memset(&sg, 0, sizeof(sg));
     sg.dim = 3;
@@ -242,7 +258,6 @@ static void test_build_field_simple(void) {
     assert(ret == 0);
     assert(basis.modes_count >= 1);
 
-    /* Build full initialization result with coefficient for mode 0 */
     FamilyCoeffs coeffs[MAX_AMPLITUDE_KEYS];
     char key_bufs[MAX_AMPLITUDE_KEYS][32];
     const char* keys_ptr[MAX_AMPLITUDE_KEYS];
@@ -271,7 +286,6 @@ static void test_build_field_simple(void) {
     );
     assert(ret == 0);
 
-    /* Build field with low resolution for fast test */
     const char* filename = "/tmp/test_build_field_simple.vts";
     ret = build_field(filename, "Wa", 0, &result, 1.0, 0, 1, 1, 1);
     assert(ret == 0);
@@ -288,7 +302,6 @@ static void test_build_field_simple(void) {
     fread(content, 1, 65535, f);
     fclose(f);
 
-    /* For a 4.0 amplitude, we should see non-trivial field values */
     int has_data = (strstr(content, "0.") != NULL || strstr(content, "0,") != NULL);
     assert(has_data);
 
@@ -305,7 +318,6 @@ static void test_build_field_simple(void) {
 static void test_build_field_2d(void) {
     printf("  Testing build_field 2D case...\n");
 
-    /* Use P1 basis */
     SymmGroup sg;
     memset(&sg, 0, sizeof(sg));
     sg.dim = 3;
@@ -345,11 +357,8 @@ static void test_build_field_2d(void) {
     ret = build_initialization_result(&basis, coeffs, n, amps, keys_ptr, n, &result);
     assert(ret == 0);
 
-    /* Note: for dim=2, basis_build still uses 3D ops, but Nc will be 1 */
     const char* filename = "/tmp/test_build_field_2d.vts";
     ret = build_field(filename, "Wa", 0, &result, 1.0, 0, 1, 1, 1);
-    /* May or may not work depending on how dim is handled in basis_build */
-    /* Just check if it doesn't crash */
     (void)n;
     printf("    [PASS] build_field 2D (no crash)\n");
 }
@@ -373,17 +382,15 @@ static void test_vtk_writer_tiled(void) {
     int ret = write_lattice_field_to_vts(filename, &lattice, field,
                                           "tile_test",
                                           Na, Nb, Nc,
-                                          1, 3, 3, 3); /* tile 3x3x3 */
+                                          1, 3, 3, 3);
     assert(ret == 0);
 
-    /* Verify file has larger grid */
     FILE* f = fopen(filename, "r");
     assert(f != NULL);
     char line[1024];
     int found_extent = 0;
     while (fgets(line, sizeof(line), f)) {
         if (strstr(line, "WholeExtent")) {
-            /* Should have 0 8 0 8 0 2 for 9x9x3 */
             found_extent = 1;
         }
     }

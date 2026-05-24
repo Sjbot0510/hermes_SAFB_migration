@@ -4,8 +4,8 @@
 # Always run `source /sandbox/setup_build.sh` before building.
 # Make automatically picks up $CC from the environment.
 
-CFLAGS = -std=c11 -Wall -Wextra -O2 -I include
-LDFLAGS = -lm
+CFLAGS = -std=c11 -Wall -Wextra -O2 -I include -I /sandbox/miniforge3/envs/build/include
+LDFLAGS = -lm -lfftw3 -L/sandbox/miniforge3/envs/build/lib
 
 SRCDIR  = src
 INCDIR  = include
@@ -13,7 +13,7 @@ TESTDIR = tests
 BUILDDIR = build
 
 # Test programs (one per module)
-TEST_NAMES = domain symmetry_ops basis initializers field engine analytic e2e
+TEST_NAMES = domain symmetry_ops basis initializers field engine analytic e2e python_compare
 
 .PHONY: all clean test
 
@@ -46,6 +46,9 @@ analytic: $(TESTDIR)/test_analytic.c $(SRCDIR)/domain.c $(SRCDIR)/symmetry_ops.c
 	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS)
 
 e2e: $(TESTDIR)/test_e2e.c $(SRCDIR)/domain.c $(SRCDIR)/symmetry_ops.c $(SRCDIR)/basis.c $(SRCDIR)/initializers.c $(SRCDIR)/field.c $(SRCDIR)/engine.c $(SRCDIR)/analytic.c
+	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS)
+
+python_compare: $(TESTDIR)/test_python_compare.c $(SRCDIR)/domain.c $(SRCDIR)/symmetry_ops.c $(SRCDIR)/basis.c $(SRCDIR)/initializers.c $(SRCDIR)/field.c $(SRCDIR)/engine.c $(SRCDIR)/analytic.c
 	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS)
 
 # Run all tests

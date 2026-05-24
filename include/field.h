@@ -1,14 +1,17 @@
 /**
- * field.h — Real-space field generation (iFFT) + VTK XML export
+ * field.h — Real-space field generation (iFFT via FFTW) + VTK XML export
  *
  * Translated from: Sg_init/field.py
  *
  * Contains:
  *   - write_lattice_field_to_vts — export scalar field to VTK .vts XML format
  *   - build_field — construct field from coefficients via 3D iFFT
- *   - 3D inverse FFT (Cooley-Tukey, radix-2 or DFT fallback)
  *   - Grid frequency construction (fftfreq equivalent)
  *   - Coefficient placement on reciprocal grid
+ *   - FFTW 3D complex DFT plans
+ *
+ * Dependencies: FFTW3 (installed via conda-forge/fftw)
+ *               Link with: -lfftw3
  */
 
 #ifndef FIELD_H
@@ -16,7 +19,6 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include <stdlib.h>
 #include "domain.h"
 #include "initializers.h"
 
@@ -25,40 +27,29 @@ extern "C" {
 #endif
 
 /* ========================================================================
- * FFTW-free 3D inverse FFT
+ * FFTW — 3D complex DFT
  *
- * For real-space grids where N is odd/even, we use a simple Cooley-Tukey
- * approach with radix-2 DFT fallback for non-power-of-2 sizes.
- *
- * Data is stored as complex double (real, imag) pairs in row-major order.
+ * Uses FFTW's plan-based API for optimal performance on any grid size.
+ * FFTW handles power-of-2, prime, and composite sizes efficiently.
  * ======================================================================== */
 
-/* Complex double array */
-typedef struct {
-    double real;
-    double imag;
-} ComplexDouble;
+/* Create an inverse FFTW plan for a 3D complex array [Na][Nb][Nc] */
+void* field_create_fftw_plan(int Na, int Nb, int Nc);
 
-/* Allocate a 3D complex array of shape [Nx][Ny][Nz] */
-static inline ComplexDouble* fftw3d_alloc(int nx, int ny, int nz) {
-    return (ComplexDouble*)calloc((size_t)(nx * ny * nz), sizeof(ComplexDouble));
-}
-void fftw3d_free(ComplexDouble* arr);
+/* Execute the inverse FFT plan */
+void field_run_fftw(void* plan);
 
-/* Access element at (i, j, k) */
-static inline ComplexDouble* fftw3d_at(ComplexDouble* arr, int nx, int ny, int nz,
-                                        int i, int j, int k) {
-    return &arr[i * ny * nz + j * nz + k];
-}
+/* Destroy the plan */
+void field_destroy_fftw_plan(void* plan);
 
-/* 1D DFT — O(N^2) fallback for non-power-of-2 sizes */
-void dft_1d(ComplexDouble* data, int N, int direction); /* direction: +1=DFT, -1=IDFT */
+/* Allocate a contiguous complex double array for FFTW */
+double* field_alloc_fftw_complex(int Na, int Nb, int Nc);
 
-/* 1D FFT — O(N log N) for power-of-2; falls back to DFT */
-void fft_1d(ComplexDouble* data, int N, int direction);
+/* Get the input (complex) buffer from a plan for pre-fill */
+void* field_get_fftw_input(void* plan);
 
-/* 3D inverse FFT along the k-axis (fastest-varying index) */
-void fftn3d_idft(ComplexDouble* arr, int nx, int ny, int nz);
+/* Get the output (real) buffer from a plan after execution */
+void* field_get_fftw_output(void* plan);
 
 /* ========================================================================
  * Frequency grid construction — scipy.fft.fftfreq equivalent
