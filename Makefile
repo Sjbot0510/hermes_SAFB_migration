@@ -14,7 +14,7 @@ BUILDDIR = build
 
 # Test programs (one per module)
 # Note: e2e is not yet implemented
-TEST_NAMES = domain symmetry_ops basis initializers field engine
+TEST_NAMES = domain symmetry_ops basis initializers field engine analytic
 
 .PHONY: all clean test
 
@@ -41,6 +41,9 @@ field: $(TESTDIR)/test_field.c $(SRCDIR)/domain.c $(SRCDIR)/symmetry_ops.c $(SRC
 	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS)
 
 engine: $(TESTDIR)/test_engine.c $(SRCDIR)/domain.c $(SRCDIR)/symmetry_ops.c $(SRCDIR)/basis.c $(SRCDIR)/initializers.c $(SRCDIR)/field.c $(SRCDIR)/engine.c
+	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS)
+
+analytic: $(TESTDIR)/test_analytic.c $(SRCDIR)/domain.c $(SRCDIR)/symmetry_ops.c $(SRCDIR)/basis.c $(SRCDIR)/initializers.c $(SRCDIR)/field.c $(SRCDIR)/engine.c $(SRCDIR)/analytic.c
 	$(CC) -o $@ $^ $(CFLAGS) $(LDFLAGS)
 
 # e2e — not yet implemented

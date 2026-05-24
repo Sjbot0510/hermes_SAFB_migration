@@ -135,11 +135,11 @@ Factory: `LatticeInfo.from_2d(a, b, gamma)` → `lattice_info_new_2d(a, b, gamma
 
 ## Analytic.py Functions
 
-| Python Function | C Target | Complexity |
-|---|---|---|
+|| Python Function | C Target | Complexity |
+|---|---|---|---|
 | `extract_basis(expr)` | *(no C equivalent needed)* — SymPy-only |
-| `calculate_square_norm(basis_expr)` | `calculate_square_norm()` | Medium — numerical integration |
-| `derive_analytical_star_function(...)` | *(no C equivalent needed)* — SymPy-only |
+| `calculate_square_norm(basis_expr)` | `calculate_square_norm()` | Medium — numerical integration (grid quadrature) |
+| `derive_analytical_star_function(...)` | *(partial — Task 6.3 pending)* |
 
 ## Notes
 

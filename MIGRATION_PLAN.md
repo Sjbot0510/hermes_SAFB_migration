@@ -31,8 +31,8 @@
 - [ ] Task 5.4: Translate `field.h` — VTK `.vts` XML file writer
 
 ## Phase 6: Engine & Analysis
-- [ ] Task 6.1: Translate `engine.c` — `SpaceGroupInitializationEngine` as procedural functions
-- [ ] Task 6.2: Translate `Analytic.py` — `calculate_square_norm()` numerical version
+- [x] Task 6.1: Translate `engine.c` — `SpaceGroupInitializationEngine` as procedural functions
+- [x] Task 6.2: Translate `Analytic.py` — `calculate_square_norm()` numerical version
 - [ ] Task 6.3: Translate `Analytic.py` — `derive_analytical_star_function()` simplified numerical version
 - [ ] Task 6.4: Translate `Analytic.py` — `extract_basis()` helper functions
 

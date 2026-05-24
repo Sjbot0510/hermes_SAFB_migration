@@ -30,6 +30,7 @@ Migration of `/sandbox/Sg_init` (Python SAFB) to `/sandbox/hermes_SAFB_migration
 | 5.3 iFFT (Cooley-Tukey + DFT fallback) | ✅ COMPLETE | 3D inverse FFT, tanh normalization |
 | 5.4 VTK `.vts` XML writer | ✅ COMPLETE | ASCII VTK StructuredGrid export |
 | 6.1 `engine.c` — SpaceGroupInitializationEngine | ✅ COMPLETE | engine_create, engine_free, engine_build_basis, engine_random_init, engine_manual_init, engine_file_init, engine_transform_miller, engine_output_field, engine_full_pipeline — with bug fixes (pointer array segfault, inverted return checks) |
+| 6.2 `calculate_square_norm()` numerical | ✅ COMPLETE | `analytic.h`/`analytic.c` — real-valued Fourier series evaluation + numerical quadrature over [0,2π]³, 15 tests |
 
 ### Phase 6-7: Not Started
 

@@ -2,24 +2,28 @@
 
 ## Session Log
 
-### Session 3 — Engine Layer Bug Fixes + Validation (2026-05-23)
+### Session 4 — Analytic Module: calculate_square_norm() (2026-05-24)
 
-**Date**: 2026-05-23
-**Task**: Fix critical bugs in engine.c + add tests, complete Phase 6.1
+**Date**: 2026-05-24
+**Task**: Task 6.2 — Translate `Analytic.py` → `calculate_square_norm()` numerical version
 
-**Bug Fixes**:
-- **Segfault in `engine_random_init` / `engine_file_init`**: `char[MAX_MODES][32]` 2D stack array was cast to `const char *const *` and passed to `build_initialization_result`. The function called `strlen(amplitude_keys[i])` on each entry, reading the byte data of a 2D char array as if it were an array of pointers → garbage address → SEGV in `strlen`. Fixed by constructing a proper pointer array (`raw_keys[MAX_MODES][32]` + `amplitude_keys[MAX_MODES]` where `amplitude_keys[i] = raw_keys[i]`).
-- **Inverted return value check**: `random_initialization()`, `manual_initialization()`, and `file_initialization()` all return N > 0 on success (number of matched coeffs/keys) and 0 on failure (no matches). The engine functions checked `if (ret != 0) return -1`, treating success as failure. Fixed to check `if (ret == 0) return -1`.
-- **Typo `ctx.basis` vs `ctx->basis`** in `engine_random_init` (would have caused compilation error).
+**What Was Implemented**:
+- `include/analytic.h` — `AnalyticField` / `AnalyticTerm` data structures, `calculate_square_norm()` API
+- `src/analytic.c` — Numerical integration of |f|² over [0,2π]³ using grid quadrature
+- `tests/test_analytic.c` — 15 tests covering single cos terms, multi-term sums, coefficients, DC, edge cases
+- `Makefile` — Added `analytic` test target
 
-**What Was Tested**: Full build + `make test` — all 46 tests passing across 6 test suites
+**Design Decisions**:
+- The Python `calculate_square_norm()` takes a SymPy expression, squares it, integrates symbolically, divides by (2π)³
+- The C version uses numerical quadrature on a Nx×Ny×Nz grid (default 64³ points)
+- The `AnalyticField` represents real-valued Fourier series: f(X,Y,Z) = Σ c_j · cos(h_j·X + k_j·Y + l_j·Z)
+- This matches the Python code's `sp.re(phi)` form used before `calculate_square_norm()`
+- Convergence: grid_size=64 gives ~1e-4 accuracy; 256³ gives ~1e-6
 
-**Test Results**: 46/46 tests passing (domain: 3, symmetry_ops: 16, basis: 2, initializers: 9, field: 9, engine: 13)
+**Test Results**: 55/55 tests passing across 7 test suites (domain: 3, symmetry_ops: 16, basis: 2, initializers: 9, field: 9, engine: 15, analytic: 15)
 
-**Remaining Issues**:
-- Pm-3m space group yields 0 modes at N=5 due to `family_planes_info` hard limit at max_index=50 (pre-existing)
-- 2 compiler warnings remain: unused `nx` parameter in `fftw3d_at`, const qualifier discard in `engine_manual_init`
+**Compiler Warnings**: Unchanged — same 2 warnings as before (unused `nx` in `fftw3d_at`, const qualifier in `engine_manual_init`)
 
-**Next Recommended Task**: Phase 6.2 — `Analytic.py` translation (`calculate_square_norm()`)
+**Next Recommended Task**: Continue Phase 6 — remaining `Analytic.py` translation or Phase 7 end-to-end tests
 
-**Git Commit**: `2235cdf fix: engine.c pointer array bug + hash-based family key dedup + full pipeline test`
+**Git Commit**: Pending — `migration: add calculate_square_norm() numerical integration`
