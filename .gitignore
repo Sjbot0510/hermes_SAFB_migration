@@ -1,0 +1,27 @@
+# Object files, executables, VTK output
+*.o
+*.d
+*.vts
+*.vtk
+*.exe
+# Exclude test files from ignore
+!tests/test_*.c
+!tests/test_*.h
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+
+# Secrets
+secrets/
+*.key
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+engine
+benchmark
+.hermes/
