@@ -24,4 +24,12 @@ secrets/
 *.swo
 engine
 benchmark
+analytic
+basis
+domain
+e2e
+field
+initializers
+python_compare
+symmetry_ops
 .hermes/
