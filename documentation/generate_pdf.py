@@ -16,7 +16,6 @@ import numpy as np
 import matplotlib
 matplotlib.use('Agg')  # Non-interactive backend
 import matplotlib.pyplot as plt
-from matplotlib.patches import FancyBboxPatch, FancyArrowPatch
 from fractions import Fraction
 
 DOC_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -30,7 +29,6 @@ def generate_architecture_diagram():
     ax.axis('off')
     ax.set_title('SAFB Library Architecture: Python → C Mapping', fontsize=14, fontweight='bold', pad=20)
 
-    # Python modules (left)
     py_modules = [
         ('domain.py', 'Data structures'),
         ('symmetry_ops.py', 'Symmetry ops'),
@@ -41,7 +39,6 @@ def generate_architecture_diagram():
         ('Analytic.py', 'Analytical calc.'),
     ]
 
-    # C modules (right)
     c_modules = [
         ('include/domain.h\nsrc/domain.c', 'Data structures'),
         ('include/symmetry_ops.h\nsrc/symmetry_ops.c', 'Symmetry ops'),
@@ -52,9 +49,9 @@ def generate_architecture_diagram():
         ('include/analytic.h\nsrc/analytic.c', 'Analytical calc.'),
     ]
 
-    # Draw Python modules
     for i, (name, desc) in enumerate(py_modules):
         y = 8.5 - i * 1.2
+        from matplotlib.patches import FancyBboxPatch
         box = FancyBboxPatch((0.5, y - 0.35), 3.5, 0.7,
                              boxstyle="round,pad=0.05",
                              facecolor='#E3F2FD', edgecolor='#1565C0', linewidth=2)
@@ -62,9 +59,9 @@ def generate_architecture_diagram():
         ax.text(2.25, y, name, ha='center', va='center', fontsize=9, fontweight='bold')
         ax.text(2.25, y - 0.25, desc, ha='center', va='center', fontsize=7, style='italic')
 
-    # Draw C modules
     for i, (name, desc) in enumerate(c_modules):
         y = 8.5 - i * 1.2
+        from matplotlib.patches import FancyBboxPatch
         box = FancyBboxPatch((6, y - 0.35), 3.5, 0.7,
                              boxstyle="round,pad=0.05",
                              facecolor='#E8F5E9', edgecolor='#2E7D32', linewidth=2)
@@ -72,7 +69,7 @@ def generate_architecture_diagram():
         ax.text(7.75, y, name, ha='center', va='center', fontsize=9, fontweight='bold')
         ax.text(7.75, y - 0.25, desc, ha='center', va='center', fontsize=7, style='italic')
 
-    # Draw arrows
+    from matplotlib.patches import FancyArrowPatch
     for i in range(len(py_modules)):
         y = 8.5 - i * 1.2
         arrow = FancyArrowPatch((4.2, y), (5.8, y),
@@ -80,7 +77,6 @@ def generate_architecture_diagram():
                                color='#666666', linewidth=1.5)
         ax.add_patch(arrow)
 
-    # Title labels
     ax.text(2.25, 9.5, 'Python Source\n(/sandbox/Sg_init)', ha='center', fontsize=10, fontweight='bold')
     ax.text(7.75, 9.5, 'C Target\n(/sandbox/hermes_SAFB_migration)', ha='center', fontsize=10, fontweight='bold')
 
@@ -94,17 +90,16 @@ def generate_star_generation():
     """Generate star generation visualization."""
     fig, axes = plt.subplots(2, 2, figsize=(12, 10))
 
-    # Example: 4-fold star from (1,0,0) in cubic lattice
-    # Point group rotations (4-fold)
     rots_2d = [
         [[1, 0], [0, 1]],
         [[0, -1], [1, 0]],
         [[-1, 0], [0, -1]],
         [[0, 1], [-1, 0]],
     ]
-    seed = np.array([1, 0])
 
-    for ax_idx, (ax, seed_label) in enumerate(zip(axes.flat[:4], [(1,0), (1,1), (2,0), (1,0,-1)])):
+    seeds = [(1,0), (1,1), (2,0), (1,0,-1)]
+
+    for ax_idx, (ax, seed_label) in enumerate(zip(axes.flat[:4], seeds)):
         ax.set_aspect('equal')
         ax.set_xlim(-2.5, 2.5)
         ax.set_ylim(-2.5, 2.5)
@@ -114,29 +109,24 @@ def generate_star_generation():
         else:
             seed_arr = np.array(seed_label[:2])
 
-        # Apply rotations
         vectors = []
         for R in rots_2d:
             R_arr = np.array(R)
             v = R_arr @ seed_arr
             vectors.append(v)
-        # Add negatives
         for v in vectors:
             vectors.append(-v)
 
         vectors = np.array(vectors)
 
-        # Draw vectors from origin
         for i, v in enumerate(vectors):
             ax.arrow(0, 0, v[0], v[1], head_width=0.15, head_length=0.1,
                     fc='steelblue', ec='steelblue', alpha=0.7, linewidth=1.5)
 
-        # Draw circle at radius |q|
         radius = np.linalg.norm(seed_arr)
         circle = plt.Circle((0, 0), radius, fill=False, color='red', linestyle='--', linewidth=1.5)
         ax.add_patch(circle)
 
-        # Label seed
         ax.plot(seed_arr[0], seed_arr[1], 'ro', markersize=10, label='Seed')
         ax.plot(0, 0, 'ko', markersize=6)
 
@@ -148,7 +138,6 @@ def generate_star_generation():
         if ax_idx == 0:
             ax.legend(loc='upper right', fontsize=8)
 
-    # Remove unused subplot
     axes[1, 1].set_visible(False)
 
     fig.suptitle('Star Generation: Symmetry-Equivalent Vectors', fontsize=14, fontweight='bold', y=0.98)
@@ -162,29 +151,21 @@ def generate_field_morphology_gyroid():
     """Generate gyroid field from Ia-3d (simulated)."""
     fig, axes = plt.subplots(2, 2, figsize=(12, 10))
 
-    # Simulate gyroid-like field using Fourier modes
-    # Gyroid: ψ = 2[cos(q₁·r)cos(q₂·r) + cos(q₂·r)cos(q₃·r) + cos(q₃·r)cos(q₁·r)]
-    # where q₁, q₂, q₃ are the three cubic face diagonals
-
-    Nx, Ny, Nz = 64, 64, 64
+    # Use small grid for fast generation
+    Nx, Ny, Nz = 16, 16, 16
     x = np.linspace(0, 2*np.pi, Nx)
     y = np.linspace(0, 2*np.pi, Ny)
     z = np.linspace(0, 2*np.pi, Nz)
     X, Y, Z = np.meshgrid(x, y, z, indexing='ij')
 
     # Gyroid equation (simplified)
-    q1 = np.array([1, 1, 0])
-    q2 = np.array([0, 1, 1])
-    q3 = np.array([1, 0, 1])
-
-    psi = (np.cos(q1[0]*X + q1[1]*Y) * np.cos(q2[0]*Y + q2[1]*Z) +
-           np.cos(q2[0]*Y + q2[1]*Z) * np.cos(q3[0]*X + q3[1]*Z) +
-           np.cos(q3[0]*X + q3[1]*Z) * np.cos(q1[0]*X + q1[1]*Y))
+    psi = (np.cos(X + Y) * np.cos(Y + Z) +
+           np.cos(Y + Z) * np.cos(X + Z) +
+           np.cos(X + Z) * np.cos(X + Y))
 
     # Normalize to [0, 1]
     psi = (psi - psi.min()) / (psi.max() - psi.min())
 
-    # Plot slices
     mid = Nz // 2
     axes[0, 0].imshow(psi[:, :, mid], extent=[0, 2*np.pi, 0, 2*np.pi],
                      cmap='RdBu_r', origin='lower', aspect='equal')
@@ -204,7 +185,6 @@ def generate_field_morphology_gyroid():
     axes[1, 0].set_xlabel('Y')
     axes[1, 0].set_ylabel('Z')
 
-    # Histogram
     axes[1, 1].hist(psi.ravel(), bins=50, color='steelblue', edgecolor='black', alpha=0.7)
     axes[1, 1].set_title('Field Distribution', fontsize=10, fontweight='bold')
     axes[1, 1].set_xlabel('ψ value')
@@ -223,20 +203,17 @@ def generate_field_morphology_bcc():
     """Generate BCC-like field from Pm-3m (simulated)."""
     fig, axes = plt.subplots(2, 2, figsize=(12, 10))
 
-    Nx, Ny, Nz = 64, 64, 64
+    Nx, Ny, Nz = 16, 16, 16
     x = np.linspace(0, 2*np.pi, Nx)
     y = np.linspace(0, 2*np.pi, Ny)
     z = np.linspace(0, 2*np.pi, Nz)
     X, Y, Z = np.meshgrid(x, y, z, indexing='ij')
 
-    # BCC-like field: sum of cosines with cubic symmetry
     psi = (np.cos(X) + np.cos(Y) + np.cos(Z) +
            0.5 * (np.cos(2*X) + np.cos(2*Y) + np.cos(2*Z)))
 
-    # Normalize to [0, 1]
     psi = (psi - psi.min()) / (psi.max() - psi.min())
 
-    # Plot slices
     mid = Nz // 2
     axes[0, 0].imshow(psi[:, :, mid], extent=[0, 2*np.pi, 0, 2*np.pi],
                      cmap='RdBu_r', origin='lower', aspect='equal')
@@ -256,7 +233,6 @@ def generate_field_morphology_bcc():
     axes[1, 0].set_xlabel('Y')
     axes[1, 0].set_ylabel('Z')
 
-    # Histogram
     axes[1, 1].hist(psi.ravel(), bins=50, color='steelblue', edgecolor='black', alpha=0.7)
     axes[1, 1].set_title('Field Distribution', fontsize=10, fontweight='bold')
     axes[1, 1].set_xlabel('ψ value')
@@ -277,31 +253,28 @@ def compile_pdf():
 
     os.chdir(DOC_DIR)
 
-    # Install texlive if needed
-    result = subprocess.run(['which', 'pdflatex'], capture_output=True)
+    # Check if pdflatex is available
+    result = subprocess.run(['which', 'pdflatex'], capture_output=True, text=True)
     if result.returncode != 0:
-        print("Installing texlive...")
-        subprocess.run(['conda', 'install', '-c', 'conda-forge',
-                       'texlive-core', 'texlive-latexextra', 'texlive-science', '-y'],
-                      env={**os.environ, 'CONDA_NO_PLUGINS': 'true',
-                           'CONDA_OVERRIDE_CUDA': '', 'solver': 'classic'},
-                      check=True)
+        print("pdflatex not found. PDF compilation skipped.")
+        print("To compile the PDF, install texlive-core via:")
+        print("  conda install -c conda-forge texlive-core")
+        return False
 
     # First pass
     result = subprocess.run(['pdflatex', '-interaction=nonstopmode', 'main.tex'],
-                           capture_output=True, text=True)
+                           capture_output=True, text=True, timeout=60)
     if result.returncode != 0:
         print("First pass warnings/errors:")
         print(result.stderr[-500:] if len(result.stderr) > 500 else result.stderr)
 
     # Second pass (for references)
     result = subprocess.run(['pdflatex', '-interaction=nonstopmode', 'main.tex'],
-                           capture_output=True, text=True)
+                           capture_output=True, text=True, timeout=60)
     if result.returncode != 0:
         print("Second pass warnings/errors:")
         print(result.stderr[-500:] if len(result.stderr) > 500 else result.stderr)
 
-    # Check if PDF was created
     pdf_path = os.path.join(DOC_DIR, 'main.pdf')
     if os.path.exists(pdf_path):
         print(f"PDF generated: {pdf_path}")
@@ -316,14 +289,22 @@ def main():
     print("SAFB Documentation: Figure Generation & PDF Compilation")
     print("=" * 60)
 
-    # Generate figures
-    print("\n--- Generating Figures ---")
-    generate_architecture_diagram()
-    generate_star_generation()
-    generate_field_morphology_gyroid()
-    generate_field_morphology_bcc()
+    print("\n--- Checking Figures ---")
+    # Only generate figures if they don't exist
+    figs = {
+        'architecture_diagram.png': generate_architecture_diagram,
+        'star_generation.png': generate_star_generation,
+        'field_morphology_gyroid.png': generate_field_morphology_gyroid,
+        'field_morphology_bcc.png': generate_field_morphology_bcc,
+    }
+    for fname, func in figs.items():
+        fpath = os.path.join(FIG_DIR, fname)
+        if os.path.exists(fpath) and os.path.getsize(fpath) > 1000:
+            print(f"  {fname}: exists, skipping")
+        else:
+            print(f"  {fname}: generating...")
+            func()
 
-    # Compile PDF
     print("\n--- Compiling PDF ---")
     compile_pdf()
 

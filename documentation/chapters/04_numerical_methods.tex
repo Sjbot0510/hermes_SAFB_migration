@@ -18,6 +18,12 @@ The library uses FFTW (Fastest Fourier Transform in the West) for efficient FFT 
     \item \texttt{fftw\_destroy\_plan}: Cleans up the plan
 \end{itemize}
 
+The forward and inverse transforms are:
+\begin{equation}
+    \tilde{f}(\mathbf{q}) = \sum_{\mathbf{r}} f(\mathbf{r}) \exp(-i \mathbf{q} \cdot \mathbf{r}), \quad
+    f(\mathbf{r}) = \frac{1}{N} \sum_{\mathbf{q}} \tilde{f}(\mathbf{q}) \exp(i \mathbf{q} \cdot \mathbf{r})
+\end{equation}
+
 \subsection{Grid Quadrature}
 
 The real-space grid is defined by the lattice parameters and the number of grid points:
@@ -28,30 +34,59 @@ The real-space grid is defined by the lattice parameters and the number of grid 
 
 where $N_x, N_y, N_z$ are the grid dimensions and $L_x, L_y, L_z$ are the lattice lengths.
 
+For 2D fields, the grid is:
+\begin{equation}
+    x_i = \frac{i}{N_x} L_x, \quad y_j = \frac{j}{N_y} L_y
+\end{equation}
+
+The grid spacing determines the maximum resolvable wavevector:
+\begin{equation}
+    q_{\text{max}} = \frac{\pi}{\Delta x} = \frac{N_x \pi}{L_x}
+\end{equation}
+
+\subsection{Reduced Coordinates}
+
+The grid points are defined in reduced (fractional) coordinates:
+\begin{equation}
+    r_\alpha = \frac{m_\alpha}{M_\alpha}
+\end{equation}
+
+where $m_\alpha$ is the grid index and $M_\alpha$ is the grid size in each direction.
+
 \section{Coefficient Solver Algorithm}
 
-The coefficient solver uses BFS on the star's relationship graph:
+The coefficient solver uses BFS on the star's relationship graph. The algorithm proceeds as follows:
 
-\begin{algorithm}[h]
-\caption{BFS Coefficient Solver}
-\begin{algorithmic}[1]
-\State $c_{\text{ref}} \gets 1.0 + 0i$
-\State $Q \gets [\text{ref\_index}]$
-\State $\text{visited}[\text{ref\_index}] \gets \text{true}$
-\While{$Q$ is not empty}
-    \State $u \gets Q.\text{pop}()$
-    \For{each neighbor $(v, \phi)$ of $u$}
-        \If{$\text{visited}[v]$}
-            \State Verify: $c_v == e^{i\phi} c_u$
-        \Else
-            \State $c_v \gets e^{i\phi} c_u$
-            \State $\text{visited}[v] \gets \text{true}$
-            \State $Q.\text{push}(v)$
-        \EndIf
-    \EndFor
-\EndWhile
-\end{algorithmic}
-\end{algorithm}
+\begin{enumerate}
+    \item Initialize the reference coefficient $c_{\text{ref}} = 1.0 + 0i$
+    \item Create a queue with the reference index
+    \item While the queue is not empty:
+    \begin{itemize}
+        \item Pop the current index $u$ from the queue
+        \item For each neighbor $(v, \phi)$ of $u$:
+        \begin{itemize}
+            \item If $v$ has been visited, verify the phase constraint
+            \item If $v$ has not been visited, set $c_v = e^{i\phi} c_u$ and add $v$ to the queue
+        \end{itemize}
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Consistency Checking}
+
+After solving, the algorithm verifies that all phase constraints are satisfied:
+\begin{equation}
+    |c_j - e^{i\phi_j} c_k| < \epsilon
+\end{equation}
+
+where $\epsilon = 10^{-10}$ is the numerical tolerance. If any constraint is violated, the star is flagged as inconsistent (a ``cancelled star'' where all coefficients must be zero).
+
+\subsection{Cancelled Stars}
+
+A star is ``cancelled'' when the symmetry constraints are so restrictive that all coefficients must be zero. This occurs when:
+\begin{itemize}
+    \item A centered lattice operation $(I, \mathbf{t})$ with $\mathbf{t} \neq 0$ produces systematic cancellations
+    \item The phase factor $e^{i\phi} = -1$ for a self-referential constraint, forcing $c = -c = 0$
+\end{itemize}
 
 \section{Memory Layout}
 
@@ -61,4 +96,31 @@ The library uses flat arrays for efficiency:
     \item Reciprocal space: flat array of complex coefficients, indexed by star and vector position
     \item Real space: flat array of real field values, indexed by $(i, j, k)$ in row-major order
     \item The mapping between reciprocal and real space is handled by FFTW
+\end{itemize}
+
+\section{Numerical Precision}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{ll}
+\hline\hline
+\textbf{Quantity} & \textbf{Tolerance} \\
+\hline
+Metric matrix round-trip & $10^{-10}$ \\
+Phase factors & $10^{-8}$ \\
+Field values (relative) & $10^{-5}$ \\
+Coefficient solver & $10^{-10}$ \\
+\hline\hline
+\end{tabular}
+\caption{Numerical tolerances used in SAFB validation.}
+\end{table}
+
+\section{FFT Aliasing}
+
+The discrete Fourier transform introduces aliasing effects. Components with wavevectors exceeding the Nyquist frequency are folded back into the grid. The SAFB library handles this by:
+
+\begin{itemize}
+    \item Only including stars with $|\mathbf{q}|$ within the grid's resolution
+    \item Using grid sizes that are multiples of the symmetry order (e.g., $N$ divisible by 4 for square symmetry)
+    \item Verifying that all star vectors map to valid grid points
 \end{itemize}

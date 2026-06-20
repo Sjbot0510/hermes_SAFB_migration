@@ -14,15 +14,24 @@ where:
     \item $A_n$ are complex amplitudes constrained by symmetry
 \end{itemize}
 
-\section{Phase Constraints}
+The Fourier coefficient for a reciprocal vector $\mathbf{q}$ is:
+\begin{equation}
+    c_{\mathbf{q}} = \frac{1}{\Omega} \int_{\Omega} \psi(\mathbf{r}) \exp(-i \mathbf{q} \cdot \mathbf{r}) \, d\mathbf{r}
+\end{equation}
 
-Symmetry imposes constraints on the Fourier coefficients. For a symmetry operation $(\Rmat, \mathbf{t})$ and a reciprocal vector $\mathbf{q}$:
+where $\Omega$ is the unit cell area (2D) or volume (3D).
+
+\section{Phase Constraints from Symmetry}
+
+\subsection{General Phase Relationship}
+
+Symmetry imposes constraints on the Fourier coefficients. For a symmetry operation $(\Rmat, \mathbf{t})$ and a reciprocal vector $\mathbf{q}$, the coefficients satisfy:
 
 \begin{equation}
     c_{\Rmat \mathbf{q}} = \exp(2\pi i \, \mathbf{t} \cdot \mathbf{q}) \, c_{\mathbf{q}}
 \end{equation}
 
-This means that once the coefficient for one vector in a star is known, all other coefficients in the star are determined up to a global phase factor.
+This is Theorem B.6 of the PSCF++ manual. It means that once the coefficient for one vector in a star is known, all other coefficients in the star are determined up to a global phase factor.
 
 \subsection{Phase Factor Computation}
 
@@ -34,7 +43,152 @@ The phase factor for a symmetry operation $(\Rmat, \mathbf{t})$ acting on vector
 
 where the dot product is computed using fractional coordinates. The exponential $\exp(i\phi)$ gives the phase relationship between symmetry-equivalent coefficients.
 
-\section{Coefficient Solver}
+\section{Symmetry-Adapted Fourier Series for Wallpaper Groups}
+
+Following Verberck (2012), we derive the symmetry-adapted Fourier series for each wallpaper group. The key insight is that symmetry operations relate Fourier coefficients, reducing the number of independent coefficients.
+
+\subsection{Rotation Constraints}
+
+\subsubsection{2-fold Rotation (p2)}
+
+For a 2-fold rotation about the origin, $(h,k) \to (-h,-k)$:
+\begin{equation}
+    c_{h,k} = c_{-h,-k}
+\end{equation}
+The minimal domain D2 consists of pairs $\{(h,-k), (-h,k)\}$ with $h > 0$, or $h=0$ and $k > 0$.
+
+\subsubsection{3-fold Rotation (p3, hexagonal)}
+
+For a 3-fold rotation in the hexagonal lattice:
+\begin{equation}
+    c_{k_1,k_2} = c_{-k_1+k_2,-k_1} = c_{-k_2,k_1-k_2}
+\end{equation}
+This forms a 3-cycle. The minimal domain D3 reduces coefficients by 3x.
+
+\subsubsection{4-fold Rotation (p4, square)}
+
+For a 4-fold rotation:
+\begin{equation}
+    c_{k_1,k_2} = c_{-k_2,k_1} = c_{-k_1,-k_2} = c_{k_2,-k_1}
+\end{equation}
+This forms a 4-cycle. The minimal domain D4 consists of $k_1 > 0$, $0 \leq k_2 < k_1$, reducing coefficients by 4x.
+
+\subsubsection{6-fold Rotation (p6, hexagonal)}
+
+For a 6-fold rotation:
+\begin{equation}
+    c_{k_1,k_2} = c_{k_2,-k_1+k_2} = c_{-k_1+k_2,-k_1} = c_{-k_1,-k_2} = c_{-k_2,k_1-k_2} = c_{k_1-k_2,k_1}
+\end{equation}
+This forms a 6-cycle. The minimal domain D6 consists of $0 < k_1$, $0 \leq k_2 < k_1$, reducing coefficients by 6x.
+
+\subsection{Reflection Constraints}
+
+\subsubsection{Mirror about x-axis (pm, rectangular)}
+
+\begin{equation}
+    c_{k_1,k_2} = c_{k_1,-k_2}
+\end{equation}
+The minimal domain is $k_2 \geq 0$, reducing coefficients by 2x.
+
+\subsubsection{Mirror about diagonal (cm, centered rectangular)}
+
+\begin{equation}
+    c_{k_1,k_2} = c_{k_2,k_1}
+\end{equation}
+
+\subsubsection{Mirror about y-axis (p4mm, square)}
+
+\begin{equation}
+    c_{k_1,k_2} = c_{-k_1,k_2}
+\end{equation}
+
+\subsection{Glide Reflection Constraints}
+
+Glide reflections introduce additional phase factors of $(-1)^n$ due to the fractional translation component.
+
+\subsubsection{Glide along x-axis (pg, rectangular)}
+
+\begin{equation}
+    c_{k_1,k_2} = (-1)^{k_1} c_{k_1,-k_2}
+\end{equation}
+
+This implies $c_{k_1,0} = 0$ for $k_1$ odd. The phase factor is $h(k_1,k_2) = (-1)^{k_1}$.
+
+\subsubsection{Glide along y-axis (p2mg, rectangular)}
+
+\begin{equation}
+    c_{k_1,k_2} = (-1)^{k_2} c_{k_1,-k_2}
+\end{equation}
+
+\subsubsection{Glide along diagonal (p2gg, rectangular)}
+
+\begin{equation}
+    c_{k_1,k_2} = (-1)^{k_1+k_2} c_{k_1,-k_2}
+\end{equation}
+
+\subsection{Centering Constraints (cm, c2mm)}
+
+For centered rectangular lattices, the centering transformation $\mathbf{r}' = \mathbf{r} + (a/2, b/2)$ leads to:
+
+\begin{equation}
+    (-1)^{q_1+q_2} c_{q_1,q_2} = c_{q_1,q_2}
+\end{equation}
+
+where $q_1 = k_1+k_2$, $q_2 = k_1-k_2$. This implies:
+\begin{equation}
+    c_{q_1,q_2} = 0 \quad \text{for } q_1 + q_2 \text{ odd}
+\end{equation}
+
+This is the \textbf{centering condition} for the cm and c2mm groups.
+
+For c2mm:
+\begin{equation}
+    c_{q_1,q_2} = c_{-q_1,-q_2} = c_{q_1,-q_2} = c_{-q_1,q_2} = (-1)^{q_1+q_2} c_{q_1,q_2}
+\end{equation}
+
+\section{Explicit Fourier Expansions}
+
+\subsection{p6 (Hexagonal, 6-fold symmetry)}
+
+\begin{equation}
+    \psi(\mathbf{r}) = c_{0,0} + \sum_{(k_1,k_2) \in D_6} c_{k_1,k_2} \sum_{j=0}^{5} \exp(i \mathbf{q}_j \cdot \mathbf{r})
+\end{equation}
+
+where the six vectors $\mathbf{q}_j$ are generated by 6-fold rotation from $(k_1,k_2)$. Domain D6: $0 < k_1$, $0 \leq k_2 < k_1$.
+
+\subsection{p4 (Square, 4-fold symmetry)}
+
+\begin{equation}
+    \psi(\mathbf{r}) = c_{0,0} + \sum_{(k_1,k_2) \in D_4} c_{k_1,k_2} \sum_{j=0}^{3} \exp(i \mathbf{q}_j \cdot \mathbf{r})
+\end{equation}
+
+where the four vectors are $(k_1,k_2)$, $(-k_2,k_1)$, $(-k_1,-k_2)$, $(k_2,-k_1)$. Domain D4: $k_1 > 0$, $0 \leq k_2 < k_1$.
+
+\subsection{p2 (Oblique/Rectangular, 2-fold symmetry)}
+
+\begin{equation}
+    \psi(\mathbf{r}) = c_{0,0} + \sum_{(k_1,k_2) \in D_2} c_{k_1,k_2} \left[ \exp(i \mathbf{q}_{k_1,k_2} \cdot \mathbf{r}) + \exp(i \mathbf{q}_{-k_1,-k_2} \cdot \mathbf{r}) \right]
+\end{equation}
+
+Domain D2: $k_1 > 0$, or $k_1 = 0$ and $k_2 > 0$.
+
+\subsection{pm (Rectangular, mirror symmetry)}
+
+\begin{equation}
+    \psi(\mathbf{r}) = c_{0,0} + \sum_{k_1} c_{k_1,0} \exp(i k_1 \mathbf{b}_1 \cdot \mathbf{r}) + 2 \sum_{k_1, k_2 > 0} \text{Re}\left[c_{k_1,k_2} \exp(i(k_1 \mathbf{b}_1 + k_2 \mathbf{b}_2) \cdot \mathbf{r})\right]
+\end{equation}
+
+Domain: $k_2 \geq 0$.
+
+\subsection{pg (Rectangular, glide symmetry)}
+
+\begin{equation}
+    \psi(x,y) = c_{0,0} + \sum_{k_1 \text{ even}} c_{k_1,0} \left[\cos(2\pi k_1 x/a) + i\sin(2\pi k_1 x/a)\right] + 2\sum_{k_2 > 0} \left\{ \sum_{k_1 \text{ even}} c_{k_1,k_2}[\cos\cos + i\sin\cos] + \sum_{k_1 \text{ odd}} c_{k_1,k_2}[-\sin\sin + i\cos\sin] \right\}
+\end{equation}
+
+Vanishing condition: $c_{k_1,0} = 0$ for $k_1$ odd.
+
+\section{Coefficient Solver Algorithm}
 
 The phase constraints form a system of linear equations. For a star with $m$ vectors and $r$ relationships, we have:
 
@@ -50,6 +204,28 @@ for each relationship $(j, k, \phi_j)$. The system is solved using BFS (Breadth-
     \item Check for consistency (no contradictory phase constraints)
     \item All coefficients are determined up to a global phase factor
 \end{enumerate}
+
+\section{Reality Criteria}
+
+\subsection{Centrosymmetric Groups}
+
+For wallpaper groups that contain inversion symmetry (2-fold rotation at the origin), all Fourier coefficients $c_{\mathbf{q}}$ must be \textbf{real}:
+
+\begin{equation}
+    c_{\mathbf{q}} \in \mathbb{R} \quad \text{for centrosymmetric groups}
+\end{equation}
+
+Centrosymmetric wallpaper groups: p1, p2, pm, p2mm, p2mg, p2gg, c2mm, p4, p4mm, p4gm, p6, p6mm.
+
+\subsection{Non-Centrosymmetric Groups}
+
+For groups without inversion symmetry, the reality condition $c_{-\mathbf{q}} = c_{\mathbf{q}}^*$ relates coefficients within the minimal domain:
+
+\begin{equation}
+    c_{-\mathbf{q}} = c_{\mathbf{q}}^*
+\end{equation}
+
+Non-centrosymmetric wallpaper groups: pg, cm, p3, p3m1, p31m.
 
 \section{Normalization}
 
@@ -74,3 +250,14 @@ This can be computed numerically on the FFT grid or analytically using Parseval'
 \begin{equation}
     \langle|\psi|^2\rangle = \sum_n |A_n|^2
 \end{equation}
+
+\section{Fourier Coefficient Maps}
+
+Each wallpaper group has a characteristic ``map'' of equivalent coefficients in $(k_1, k_2)$ space. These maps show:
+\begin{itemize}
+    \item \textbf{1}: Independent coefficients (one per minimal domain)
+    \item \textbf{100}: Coefficients equivalent under symmetry (one value per equivalence class)
+    \item \textbf{200}: Doubly-equivalent coefficients (special positions with higher multiplicity)
+\end{itemize}
+
+These maps are complementary to the International Tables for Crystallography and can be used for identifying wallpaper groups from experimental diffraction data.

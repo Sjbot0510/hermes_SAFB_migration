@@ -24,52 +24,65 @@
 
 \subsection{LatticeInfo}
 
-\begin{lstlisting}
-typedef struct {
-    double Lx, Ly, Lz;      // Lattice lengths
-    double alpha, beta, gamma; // Lattice angles (degrees)
-    double G[3][3];         // Reciprocal metric tensor
-    double Ginv[3][3];      // Inverse metric tensor
-    int dim;                // 2 or 3
-} LatticeInfo;
-\end{lstlisting}
+A structure holding lattice parameters and metric tensors:
+
+\begin{itemize}
+    \item \texttt{Lx, Ly, Lz}: Lattice lengths (Å)
+    \item \texttt{alpha, beta, gamma}: Lattice angles (degrees)
+    \item \texttt{G[3][3]}: Reciprocal metric tensor
+    \item \texttt{Ginv[3][3]}: Inverse metric tensor
+    \item \texttt{dim}: Dimension (2 or 3)
+\end{itemize}
 
 \subsection{Star}
 
-\begin{lstlisting}
-typedef struct {
-    int hkl[3];             // Canonical Miller indices
-    double q2;              // |q|^2 (q-squared)
-    int multiplicity;       // Number of vectors
-    int closed;             // 1 if closed under inversion
-    int vectors[3][MAX_STAR_SIZE]; // Symmetry-equivalent vectors
-    int vector_keys[MAX_STAR_SIZE]; // Lexicographic keys
-    double phase_factors[MAX_STAR_SIZE]; // Phase factors
-} Star;
-\end{lstlisting}
+A structure holding star information:
+
+\begin{itemize}
+    \item \texttt{hkl[3]}: Canonical Miller indices
+    \item \texttt{q2}: $|\mathbf{q}|^2$ (q-squared)
+    \item \texttt{multiplicity}: Number of vectors in the star
+    \item \texttt{closed}: 1 if closed under inversion
+    \item \texttt{vectors[3][MAX\_STAR\_SIZE]}: Symmetry-equivalent vectors
+    \item \texttt{vector\_keys[MAX\_STAR\_SIZE]}: Lexicographic keys
+    \item \texttt{phase\_factors[MAX\_STAR\_SIZE]}: Phase factors
+\end{itemize}
 
 \subsection{SAFBBasis}
 
-\begin{lstlisting}
-typedef struct {
-    int n_modes;            // Number of modes (families)
-    Star modes[MAX_MODES];  // Mode data
-    int centrosymmetric;    // 1 if inversion is in point group
-    int inversion_at_origin; // 1 if inversion at origin
-} SAFBBasis;
-\end{lstlisting}
+A structure holding the complete basis:
+
+\begin{itemize}
+    \item \texttt{n\_modes}: Number of modes (families)
+    \item \texttt{modes[MAX\_MODES]}: Mode data
+    \item \texttt{centrosymmetric}: 1 if inversion is in point group
+    \item \texttt{inversion\_at\_origin}: 1 if inversion at origin
+\end{itemize}
 
 \section{API Usage}
 
-\begin{lstlisting}
-// Create engine from space group file
-Engine *engine = engine_create("examples/space_groups_3d/ia_3d.txt",
-                                "examples/lattice_cubic.txt");
+\subsection{Basic Workflow}
 
-// Random initialization
+\begin{enumerate}
+    \item Create engine from space group file and lattice parameters
+    \item Initialize (random or manual)
+    \item Build field (inverse FFT)
+    \item Output field to VTK
+    \item Clean up
+\end{enumerate}
+
+\subsection{Example Code}
+
+\begin{verbatim}
+// Create engine from space group file
+Engine *engine = engine_create(
+    "examples/space_groups_3d/ia_3d.txt",
+    "examples/lattice_cubic.txt");
+
+// Random initialization with seed 42
 engine_init_random(engine, 42);
 
-// Build field
+// Build field on 64x64x64 grid
 engine_build_field(engine, 64, 64, 64);
 
 // Output field to VTK
@@ -77,4 +90,4 @@ engine_output_field(engine, "gyroid.vts");
 
 // Clean up
 engine_destroy(engine);
-\end{lstlisting}
+\end{verbatim}
