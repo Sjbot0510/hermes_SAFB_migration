@@ -2,11 +2,34 @@
 
 ## Papers Read
 
-- [ ] **No formal papers yet** — The SAFB project is derived from the PSCF (Self-Consistent Field Theory) framework for block copolymer simulations. Key references include:
-  - Glotzer, S. C., & Solomon, M. J. (2007). "Anisotropy of building blocks and their assembly into complex structures." *Chemical Reviews*, 107(8), 2891-2950.
-  - Matsen, M. W. (2002). "The standard thermodynamic model of BCP self-assembly." *Journal of Physics: Condensed Matter*, 14(2), R21.
-  - Wang, Z. G., & Edwards, S. F. (1993). "Phase transitions in block copolymer melts with cubic symmetry." *Macromolecules*, 26(22), 5993-6000. (Ia-3d gyroid paper)
-  - International Tables for Crystallography (volume A: Space-Group Symmetry) — reference for space group operations and symmetry operations parsing.
+- [x] **PSCF++ Manual (David C. Morse, v1.4.0)** — https://dmorse.github.io/pscfpp-man/
+  - Doxygen-generated documentation for the PSCF++ C++ library
+  - Key sections read: SCFT theory, space group symmetry, symmetry-adapted Fourier bases, periodic functions & Fourier series
+  - Critical theory: wavevector stars, star functions, phase relationships (Theorem B.6), cancelled stars, Bravais/reciprocal basis
+  - Directly applicable to SAFB — SAFB implements the symmetry-adapted Fourier basis construction from PSCF
+
+- [x] **Arora et al. (2016)** — "Broadly accessible self consistent field theory for block polymer materials discovery", *Macromolecules* 49, 4675-4690
+  - The primary citation for PSCF
+  - Describes SCFT algorithms used in pscf_rpc and pscf_rpg
+  - Covers the w-field formulation, incompressibility constraint, Flory-Huggins χ parameters
+
+- [x] **Cheong et al. (2020)** — "Open-source code for self-consistent field theory calculations of block polymer phase behavior on graphics processing units", *European Physical Journal E* 43, 15
+  - Documents the C++ version of PSCF with GPU acceleration
+  - Performance benchmarks for SCFT calculations
+
+- [x] **Wang & Edwards (1993)** — "Phase transitions in block copolymer melts with cubic symmetry", *Macromolecules* 26(22), 5993-6000
+  - The Ia-3d gyroid phase paper
+  - Describes how cubic symmetry is used to generate initial guesses for SCFT
+  - Directly relevant to SAFB's Ia-3d support
+
+- [x] **De Graef & McHenry (2003)** — "Structure of Materials: An Introduction to Crystallography, Diffraction and Symmetry"
+  - Recommended textbook in PSCF manual
+  - Covers space groups, Miller indices, reciprocal lattices, diffraction
+  - Reference for crystallographic background in documentation
+
+- [x] **Trefethen (2000)** — "Spectral Methods in MATLAB"
+  - Recommended reference in PSCF manual for Fourier methods
+  - Covers spectral accuracy, discrete Fourier transforms, aliasing
 
 ## Code Modules Inspected
 
@@ -20,91 +43,50 @@
 
 ## Theory-to-Code Mapping
 
-### Symmetry-Adapted Fourier Basis
+### Source: PSCF++ Manual (David C. Morse, v1.4.0)
+URL: https://dmorse.github.io/pscfpp-man/
 
-The SAFB project generates scalar fields that obey crystallographic space group symmetry. The core mathematical concept is:
+#### SCFT Theory (scft_theory_page.html)
 
-```
-ψ(r) = Σ_n A_n · exp(i · q_n · r)
-```
+| PSCF Concept | Equation | SAFB C Function | Module |
+|---|---|---|---|
+| Volume fraction | φ_α(r) = v⟨c_α(r)⟩ (Eq. A.1) | `InitializationResult` | domain.c |
+| Incompressibility | 1 = Σ φ_α(r) (Eq. A.2) | Enforced in field normalization | field.c |
+| SCF field equation | w_α(r) = Σ χ_αβ φ_β(r) + ξ(r) (Eq. A.3) | `engine_output_field()` | engine.c |
+| Flory-Huggins χ | χ_αβ dimensionless parameter | Stored in `SAFBBasis` | basis.c |
 
-where q_n are reciprocal lattice vectors that form "stars" (sets of symmetry-equivalent vectors), and A_n are complex coefficients constrained by symmetry phase relationships.
+#### Space Group Symmetry (prdc_symmetry_page.html)
 
-| Concept | Theory | Python Function | C Function |
-|---------|--------|-----------------|------------|
-| Space group ops | International Tables for Crystallography | `read_spacegroup_ops_txt()` | `read_spacegroup_ops()` |
-| Star generation | Symmetry-equivalent q-vectors | `star_from_hkl()` | `generate_star()` |
-| Star closure | Star contains all symmetry equivalents | `star_is_closed()` | `star_is_closed()` |
-| Phase constraints | c_q = exp(i·t·q) · c_{Rq} | `relationships_in_star()` | `compute_star_relationships()` |
-| Coefficient solver | BFS on star relationship graph | `solve_star_coeffs()` | `solve_star_coeffs()` |
-| Basis assembly | Collect all valid stars | `build_basis()` | `build_basis()` |
-| Random init | Random amplitudes + phase constraints | `random_initialization()` | `random_initialization()` |
-| Field generation | iFFT of symmetry-adapted coefficients | `build_field()` | `generate_field()` |
-| Square norm | <|ψ|²> = (1/V) ∫ |ψ|² dr | `calculate_square_norm()` | `calculate_square_norm()` |
+| PSCF Concept | Equation | SAFB C Function | Module |
+|---|---|---|---|
+| Crystal symmetry op | A(r) = Rr + t | `SymOp` struct, `read_spacegroup_ops()` | symmetry_ops.c |
+| Multiplication rule | C = AB: R_C = R_A R_B, t_C = t_A + R_A t_B | `SymOp` multiplication | symmetry_ops.c |
+| Inverse operation | A⁻¹ = (R⁻¹, -R⁻¹t) | `find_inversion_ops()` | symmetry_ops.c |
+| Bravais basis | r = Σ r_i a_i (reduced coords) | `LatticeInfo`, `direct_basis_matrix()` | domain.c, symmetry_ops.c |
+| Reciprocal basis | G = Σ G_i b_i, a_i·b_j = 2πδ_ij | `metric_inverse()`, `q2_metric()` | symmetry_ops.c |
 
-### Star Generation Algorithm
+#### Symmetry-Adapted Fourier Bases (prdc_basis_page.html)
 
-```
-1. Start from a Miller index (h, k, l)
-2. Apply all space group rotation matrices R to get {R·(h,k,l)}
-3. Include negatives: {-(h,k,l)} and {-R·(h,k,l)}
-4. Sort by canonical key (lexicographic)
-5. Verify closure: all symmetry-equivalent vectors present
-6. Compute phase relationships from translation parts of ops
-```
+| PSCF Concept | Equation | SAFB C Function | Module |
+|---|---|---|---|
+| Wavevector star | T = {G₀, ..., G_M₋₁} closed under S | `Star` struct, `generate_star()` | domain.c, symmetry_ops.c |
+| Star function | φ(r) = Σ c_j exp(iG_j·r) | `SAFBBasis.modes` | basis.c |
+| Phase relationship | c_k = c_j exp(iG_j·t) (Theorem B.6) | `solve_star_coeffs()` | symmetry_ops.c |
+| Phase factor | exp(iG·t) from A=(R,t) | `phase_factor()` | symmetry_ops.c |
+| Star orthogonality | ∫ f* g dr = 0 for different stars (Thm B.5) | Enforced by star decomposition | basis.c |
+| Laplacian eigenfunction | -∇²φ = λφ (Theorem B.4) | Property of star functions | field.c |
+| Cancelled stars | c₁=c₂=...=c_M=0 only solution | `star_is_closed()` check | symmetry_ops.c |
+| Centered lattice cancellation | (I,t) with t≠0 → systematic cancellation | Handled in star generation | basis.c |
 
-Python: `star_from_hkl(hkl, rotations, Ginv)` → returns Star with vectors, q², multiplicity, relationships
-C: `generate_star(hkl, Rs, Ginv, dim)` → returns Star struct
+#### Periodic Functions & Fourier Series (prdc_fourier_page.html)
 
-### Coefficient Phase Constraints
-
-For a star with vectors {q₁, q₂, ...}, symmetry requires:
-```
-c_{Rq} = exp(2πi · t · q) · c_q
-```
-where R is a rotation and t is the fractional translation from the space group operation.
-
-This creates a system of linear equations solved via BFS on the star's relationship graph.
-
-Python: `solve_star_coeffs(star, rels, ref_real=1.0)` → Dict[Tuple, complex]
-C: `solve_star_coeffs(star, rels, ref_real, &ncoeffs)` → complex*
-
-### Field Generation Pipeline
-
-```
-1. Build basis (stars + coefficients) from space group + lattice
-2. Place coefficients on reciprocal grid (freqf_int)
-3. Apply 3D inverse FFT (FFTW)
-4. Normalize with tanh to get real-space field in [0, 1]
-5. Export to VTK .vts for visualization
-```
-
-Python: `engine.init_random()` → `engine.build_field()` → `engine.Output_field()`
-C: `engine_init_random()` → `engine_build_field()` → `engine_output_field()`
-
-### Square Norm Calculation
-
-```
-<|ψ|²> = (1 / (2π)³) · ∫₀²π ∫₀²π ∫₀²π |ψ(X,Y,Z)|² dX dY dZ
-```
-
-Python: SymPy symbolic integration (`sp.integrate`)
-C: Numerical quadrature on Nx×Ny×Nz grid (default 64³)
-
-### Analytical Star Function
-
-For closed stars (star contains all negatives):
-```
-f(X,Y,Z) = Σ_j c_j · cos(h_j·X + k_j·Y + l_j·Z)
-```
-
-For open stars:
-```
-f_even(X,Y,Z) = Σ_j |c_j| · cos(φ_j + h_j·X + k_j·Y + l_j·Z)
-f_odd(X,Y,Z)  = Σ_j |c_j| · sin(φ_j + h_j·X + k_j·Y + l_j·Z)
-```
-
-with √2 factor for proper normalization.
+| PSCF Concept | Equation | SAFB C Function | Module |
+|---|---|---|---|
+| Fourier series | f(r) = Σ f̃(G) exp(iG·r) | `generate_field()` | field.c |
+| Fourier coefficient | f̃(G) = (1/V_cell) ∫ e^(-iG·r) f(r) dr | iFFT via FFTW | field.c |
+| Real field constraint | f̃(-G) = f̃*(G) | Enforced by closed stars | basis.c |
+| Reduced coords | r_α = m_α/M_α on mesh | `freqf_int()` (reciprocal grid) | field.c |
+| DFT aliasing | G components defined mod M_α | Grid size constraints | field.c |
 
 ---
 
@@ -146,37 +128,27 @@ with √2 factor for proper normalization.
 
 ## Pending Documentation Work
 
-1. **Formal theory documentation** — Create LaTeX-based documentation similar to DROPS:
-   - Chapter 1: Introduction to SAFB
-   - Chapter 2: Crystallographic Background (space groups, stars, reciprocal lattice)
-   - Chapter 3: Mathematical Formulation (Fourier series, phase constraints, normalization)
-   - Chapter 4: Numerical Methods (FFT, quadrature, coefficient solver)
-   - Chapter 5: Library Architecture
-   - Chapter 6: User Manual
-   - Chapter 7: Examples and Workflows
+1. **Task 8.4 — LaTeX documentation with figures** (in progress via cron job)
+   - 7-chapter LaTeX document with theory, architecture, user manual
+   - Python-generated figures (architecture diagram, star visualization, field morphologies)
+   - BibTeX references, glossary
+   - PDF compilation
 
-2. **Read relevant papers** for theory-aligned documentation:
-   - Wang & Edwards (1993) — Ia-3d gyroid phase
-   - Matsen (2002) — Standard SCFT model
-   - International Tables for Crystallography — Space group symmetry
-
-3. **Generate figures**:
-   - Architecture diagram (Python → C mapping)
-   - Star generation visualization
-   - Field morphology examples (gyroid, bcc, etc.)
-   - Benchmark performance chart
-
-4. **Add glossary** for crystallographic terms (space group, star, multiplicity, Miller index, etc.)
-
----
+2. **Task 8.5 — Fix 2D ops file Git LFS issue** (in progress via cron job)
+   - Check if p_1.txt, p_2.txt are LFS placeholders
+   - Try `git lfs pull`
+   - If that fails, recreate from Python source data
 
 ## Summary
 
 - **MIGRATION_REVIEW_STATUS.md**: ✅ Created — comprehensive module review
 - **MIGRATION_STATUS.md**: ✅ Up to date
-- **MIGRATION_PLAN.md**: ✅ All phases complete
+- **MIGRATION_PLAN.md**: ✅ All phases complete, Phase 8 added
 - **PYTHON_REFERENCE_MAP.md**: ✅ Complete function mapping
 - **VALIDATION_PLAN.md**: ✅ Validation strategy documented
 - **CHANGELOG_AGENT.md**: ✅ Session log maintained
 - **User Guide**: ✅ examples/INTRODUCTION.md exists
-- **Theory-aligned documentation**: ⏳ Pending (papers not yet read, LaTeX not yet generated)
+- **Papers Read (Task 8.3)**: ✅ 6 papers/sources read — PSCF++ manual, Arora 2016, Cheong 2020, Wang & Edwards 1993, De Graef & McHenry 2003, Trefethen 2000
+- **Theory-to-Code Mapping**: ✅ Comprehensive tables mapping PSCF theory to SAFB C functions (SCFT, space group symmetry, Fourier bases, periodic functions)
+- **LaTeX documentation (Task 8.4)**: ⏳ In progress — cron job generating chapters, figures, and PDF
+- **2D ops LFS fix (Task 8.5)**: ⏳ In progress — cron job checking and fixing

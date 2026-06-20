@@ -1,0 +1,80 @@
+\chapter{Library Architecture}
+
+\section{Module Overview}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lll}
+\hline\hline
+\textbf{Module} & \textbf{Purpose} & \textbf{Key Functions} \\
+\hline
+\texttt{domain.h/c} & Data structures & \texttt{LatticeInfo}, \texttt{Star}, \texttt{SAFBBasis} \\
+\texttt{symmetry\_ops.h/c} & Symmetry operations & \texttt{read\_spacegroup\_ops\_txt}, \texttt{star\_from\_hkl} \\
+\texttt{basis.h/c} & Basis construction & \texttt{family\_planes\_info}, \texttt{build\_basis} \\
+\texttt{initializers.h/c} & Amplitude assignment & \texttt{random\_initialization}, \texttt{manual\_initialization} \\
+\texttt{field.h/c} & Field generation & \texttt{build\_field}, \texttt{build\_field\_2d} \\
+\texttt{engine.h/c} & High-level API & \texttt{engine\_create}, \texttt{engine\_init\_random} \\
+\texttt{analytic.h/c} & Analytical calculations & \texttt{calculate\_square\_norm} \\
+\hline\hline
+\end{tabular}
+\caption{Library modules and their responsibilities}
+\end{table}
+
+\section{Data Structures}
+
+\subsection{LatticeInfo}
+
+\begin{lstlisting}
+typedef struct {
+    double Lx, Ly, Lz;      // Lattice lengths
+    double alpha, beta, gamma; // Lattice angles (degrees)
+    double G[3][3];         // Reciprocal metric tensor
+    double Ginv[3][3];      // Inverse metric tensor
+    int dim;                // 2 or 3
+} LatticeInfo;
+\end{lstlisting}
+
+\subsection{Star}
+
+\begin{lstlisting}
+typedef struct {
+    int hkl[3];             // Canonical Miller indices
+    double q2;              // |q|^2 (q-squared)
+    int multiplicity;       // Number of vectors
+    int closed;             // 1 if closed under inversion
+    int vectors[3][MAX_STAR_SIZE]; // Symmetry-equivalent vectors
+    int vector_keys[MAX_STAR_SIZE]; // Lexicographic keys
+    double phase_factors[MAX_STAR_SIZE]; // Phase factors
+} Star;
+\end{lstlisting}
+
+\subsection{SAFBBasis}
+
+\begin{lstlisting}
+typedef struct {
+    int n_modes;            // Number of modes (families)
+    Star modes[MAX_MODES];  // Mode data
+    int centrosymmetric;    // 1 if inversion is in point group
+    int inversion_at_origin; // 1 if inversion at origin
+} SAFBBasis;
+\end{lstlisting}
+
+\section{API Usage}
+
+\begin{lstlisting}
+// Create engine from space group file
+Engine *engine = engine_create("examples/space_groups_3d/ia_3d.txt",
+                                "examples/lattice_cubic.txt");
+
+// Random initialization
+engine_init_random(engine, 42);
+
+// Build field
+engine_build_field(engine, 64, 64, 64);
+
+// Output field to VTK
+engine_output_field(engine, "gyroid.vts");
+
+// Clean up
+engine_destroy(engine);
+\end{lstlisting}

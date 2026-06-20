@@ -1,0 +1,59 @@
+\chapter{User Manual}
+
+\section{Building the Library}
+
+\begin{verbatim}
+source /sandbox/setup_build.sh   # Activate build environment
+make                             # Build all test programs
+make test                        # Run all tests
+\end{verbatim}
+
+\section{Running Examples}
+
+\subsection{3D Example: Ia-3d Gyroid}
+
+\begin{verbatim}
+# Build the library first
+source /sandbox/setup_build.sh
+make
+
+# Run the gyroid example (uses space group file)
+./examples/run_gyroid.sh
+\end{verbatim}
+
+\subsection{2D Example: P4 Square Lattice}
+
+\begin{verbatim}
+# Run the 2D P4 example
+./examples/run_2d_p4.sh
+\end{verbatim}
+
+\section{Configuration}
+
+\subsection{Lattice Parameters}
+
+Lattice parameters are specified in \texttt{examples/lattice\_cubic.txt}:
+
+\begin{verbatim}
+a=10, b=10, c=10, alpha=90, beta=90, gamma=90
+\end{verbatim}
+
+For non-cubic lattices, modify the values accordingly.
+
+\subsection{Grid Resolution}
+
+The grid resolution is specified in the engine call:
+
+\begin{verbatim}
+engine_build_field(engine, Nx, Ny, Nz)
+\end{verbatim}
+
+Typical values: $64 \times 64 \times 64$ for production, $16 \times 16 \times 16$ for testing.
+
+\section{Output Files}
+
+\begin{itemize}
+    \item \texttt{*.vts}: VTK XML structured point data files (viewable in ParaView)
+    \item \texttt{*.dat}: Field data in plain text format
+    \item \texttt{*.json}: Basis metadata (mode count, q-values, etc.)
+\end{itemize}

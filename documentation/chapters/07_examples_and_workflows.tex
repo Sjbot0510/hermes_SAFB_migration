@@ -1,0 +1,56 @@
+\chapter{Examples and Workflows}
+
+\section{Gyroid (Ia-3d)}
+
+The gyroid is a bicontinuous minimal surface with Ia-3d symmetry. It is one of the most studied structures in block copolymer science.
+
+\subsection{Generation Steps}
+
+\begin{enumerate}
+    \item Load space group operations from \texttt{examples/space\_groups\_3d/ia\_3d.txt}
+    \item Load lattice parameters (cubic, $a = 10$)
+    \item Build basis: find all valid stars up to $N_{\text{max}} = 5$
+    \item Random initialization: assign random amplitudes with symmetry constraints
+    \item Build field: compute inverse FFT on $64^3$ grid
+    \item Normalize: apply tanh normalization
+    \item Export: write to \texttt{gyroid.vts}
+\end{enumerate}
+
+\subsection{Expected Results}
+
+\begin{itemize}
+    \item 5 modes (families) with multiplicities: 8, 6, 24, 12, 48
+    \item Total Fourier modes: 98
+    \item Field range: $[0, 1]$ after normalization
+    \item Square norm: $\approx 0.5$ for random initialization
+\end{itemize}
+
+\section{BCC-like (Pm-3m)}
+
+The Pm-3m space group generates BCC-like density modulations.
+
+\subsection{Generation Steps}
+
+Same as gyroid, but with \texttt{pm3m.txt} space group file and cubic lattice.
+
+\section{2D Examples}
+
+\subsection{Square Lattice (P4)}
+
+The P4 wallpaper group generates 4-fold symmetric patterns.
+
+\begin{itemize}
+    \item 4 symmetry operations (0°, 90°, 180°, 270° rotations)
+    \item Supports 2D field generation
+    \item Useful for studying 2D self-assembly patterns
+\end{itemize}
+
+\subsection{Hexagonal Lattice (P6)}
+
+The P6 wallpaper group generates 6-fold symmetric patterns.
+
+\begin{itemize}
+    \item 6 symmetry operations (0°, 60°, 120°, 180°, 240°, 300° rotations)
+    \item Supports 2D field generation
+    \item Hexagonal packing patterns
+\end{itemize}

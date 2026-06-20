@@ -1,0 +1,64 @@
+\chapter{Numerical Methods}
+
+\section{FFT-Based Field Generation}
+
+The field is computed using the inverse Fast Fourier Transform (FFT):
+
+\begin{equation}
+    \psi(\mathbf{r}_j) = \mathcal{F}^{-1}\{ c_{\mathbf{q}_n} \}
+\end{equation}
+
+\subsection{FFTW Integration}
+
+The library uses FFTW (Fastest Fourier Transform in the West) for efficient FFT computation:
+
+\begin{itemize}
+    \item \texttt{fftw\_plan\_dft\_3d}: Creates a 3D FFT plan for the specified grid size
+    \item \texttt{fftw\_execute}: Executes the FFT plan
+    \item \texttt{fftw\_destroy\_plan}: Cleans up the plan
+\end{itemize}
+
+\subsection{Grid Quadrature}
+
+The real-space grid is defined by the lattice parameters and the number of grid points:
+
+\begin{equation}
+    x_i = \frac{i}{N_x} L_x, \quad y_j = \frac{j}{N_y} L_y, \quad z_k = \frac{k}{N_z} L_z
+\end{equation}
+
+where $N_x, N_y, N_z$ are the grid dimensions and $L_x, L_y, L_z$ are the lattice lengths.
+
+\section{Coefficient Solver Algorithm}
+
+The coefficient solver uses BFS on the star's relationship graph:
+
+\begin{algorithm}[h]
+\caption{BFS Coefficient Solver}
+\begin{algorithmic}[1]
+\State $c_{\text{ref}} \gets 1.0 + 0i$
+\State $Q \gets [\text{ref\_index}]$
+\State $\text{visited}[\text{ref\_index}] \gets \text{true}$
+\While{$Q$ is not empty}
+    \State $u \gets Q.\text{pop}()$
+    \For{each neighbor $(v, \phi)$ of $u$}
+        \If{$\text{visited}[v]$}
+            \State Verify: $c_v == e^{i\phi} c_u$
+        \Else
+            \State $c_v \gets e^{i\phi} c_u$
+            \State $\text{visited}[v] \gets \text{true}$
+            \State $Q.\text{push}(v)$
+        \EndIf
+    \EndFor
+\EndWhile
+\end{algorithmic}
+\end{algorithm}
+
+\section{Memory Layout}
+
+The library uses flat arrays for efficiency:
+
+\begin{itemize}
+    \item Reciprocal space: flat array of complex coefficients, indexed by star and vector position
+    \item Real space: flat array of real field values, indexed by $(i, j, k)$ in row-major order
+    \item The mapping between reciprocal and real space is handled by FFTW
+\end{itemize}

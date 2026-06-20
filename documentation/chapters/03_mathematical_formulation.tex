@@ -1,0 +1,76 @@
+\chapter{Mathematical Formulation}
+
+\section{Symmetry-Adapted Fourier Series}
+
+The scalar field $\psi(\mathbf{r})$ is expanded as a Fourier series over symmetry-adapted modes:
+
+\begin{equation}
+    \psi(\mathbf{r}) = \sum_{n} A_n \exp(i \mathbf{q}_n \cdot \mathbf{r})
+\end{equation}
+
+where:
+\begin{itemize}
+    \item $\mathbf{q}_n$ are the reciprocal lattice vectors (from stars)
+    \item $A_n$ are complex amplitudes constrained by symmetry
+\end{itemize}
+
+\section{Phase Constraints}
+
+Symmetry imposes constraints on the Fourier coefficients. For a symmetry operation $(\Rmat, \mathbf{t})$ and a reciprocal vector $\mathbf{q}$:
+
+\begin{equation}
+    c_{\Rmat \mathbf{q}} = \exp(2\pi i \, \mathbf{t} \cdot \mathbf{q}) \, c_{\mathbf{q}}
+\end{equation}
+
+This means that once the coefficient for one vector in a star is known, all other coefficients in the star are determined up to a global phase factor.
+
+\subsection{Phase Factor Computation}
+
+The phase factor for a symmetry operation $(\Rmat, \mathbf{t})$ acting on vector $\mathbf{q} = (h, k, l)$ is:
+
+\begin{equation}
+    \phi = 2\pi \, \mathbf{t} \cdot \mathbf{q} = 2\pi \sum_{j} t_j q_j
+\end{equation}
+
+where the dot product is computed using fractional coordinates. The exponential $\exp(i\phi)$ gives the phase relationship between symmetry-equivalent coefficients.
+
+\section{Coefficient Solver}
+
+The phase constraints form a system of linear equations. For a star with $m$ vectors and $r$ relationships, we have:
+
+\begin{equation}
+    c_j = e^{i\phi_j} c_k
+\end{equation}
+
+for each relationship $(j, k, \phi_j)$. The system is solved using BFS (Breadth-First Search) on the relationship graph:
+
+\begin{enumerate}
+    \item Start with a reference coefficient $c_{\text{ref}} = 1.0 + 0i$
+    \item For each relationship, propagate the phase constraint through the graph
+    \item Check for consistency (no contradictory phase constraints)
+    \item All coefficients are determined up to a global phase factor
+\end{enumerate}
+
+\section{Normalization}
+
+The field is normalized using the hyperbolic tangent function to ensure values lie in $[0, 1]$:
+
+\begin{equation}
+    \psi_{\text{norm}}(\mathbf{r}) = \frac{1}{2} \left[ 1 + \tanh\left( \frac{\psi(\mathbf{r}) - \langle\psi\rangle}{\sigma \cdot \text{std}(\psi)} \right) \right]
+\end{equation}
+
+where $\sigma$ is a scaling parameter (typically $\sigma = 1.0$).
+
+\section{Square Norm}
+
+The square norm (average of $\psi^2$ over the unit cell) is:
+
+\begin{equation}
+    \langle|\psi|^2\rangle = \frac{1}{V} \int_V |\psi(\mathbf{r})|^2 \, d\mathbf{r}
+\end{equation}
+
+This can be computed numerically on the FFT grid or analytically using Parseval's theorem:
+
+\begin{equation}
+    \langle|\psi|^2\rangle = \sum_n |A_n|^2
+\end{equation}
