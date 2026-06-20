@@ -33,3 +33,11 @@ initializers
 python_compare
 symmetry_ops
 .hermes/
+
+ref/font-*.cff
+
+ref/font-*.ttf
+
+ref/font-*.cid
+
+ref/image-*.*
