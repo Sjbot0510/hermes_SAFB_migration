@@ -31,6 +31,23 @@
   - Recommended reference in PSCF manual for Fourier methods
   - Covers spectral accuracy, discrete Fourier transforms, aliasing
 
+- [x] **Julian, Slebodnick & Julian (2025)** — "Foundations of Crystallography with Computer Applications" (3rd ed., CRC Press)
+  - 525-page textbook covering lattices, metric matrices, reciprocal lattices, point groups, space groups
+  - Key chapters for SAFB: Ch.1 (Lattices), Ch.3 (Point Groups 2D), Ch.4 (Space Groups 2D/Wallpaper), Ch.5 (Reciprocal Lattice), Ch.7 (Fourier/Structure Factors)
+  - 5 Bravais lattices in 2D: oblique, rectangular primitive, rectangular centered, square, hexagonal
+  - 17 wallpaper groups with Hasse diagrams and asymmetric units
+  - Full treatment of metric matrix G, transformation matrices P, Miller indices, d-spacing
+
+- [x] **Verberck (2012)** — "Symmetry-Adapted Fourier Series for the Wallpaper Groups", Symmetry 4, 379-426
+  - 48-page open-access paper (CC BY 3.0), DOI: 10.3390/sym4030379
+  - Derives symmetry-adapted Fourier series for all 17 wallpaper groups
+  - Explicit coefficient relations: rotations (2/3/4/6-fold), reflections, glide reflections, centering
+  - Minimal domains D1, D2, D3, D4, D6, D12 for independent coefficients
+  - Fourier coefficient maps (diffraction patterns) for each group
+  - Reality criteria: centrosymmetric vs non-centrosymmetric groups
+  - Explicit Fourier expansions for p6, p4, p2, pm, pg
+  - Extracted full text to `documentation/references/REFERENCE_MATERIALS.md`
+
 ## Code Modules Inspected
 
 - [x] `domain.py` — Data structures (LatticeInfo, Star, SAFBBasis, InitializationResult, ScatteringProfile)
