@@ -139,22 +139,29 @@ URL: https://dmorse.github.io/pscfpp-man/
 - [x] Sessions 4-5 documented with implementation details
 
 ### User Guide
-- [x] examples/INTRODUCTION.md — User-facing guide with use cases, getting started, examples
+|- [x] examples/INTRODUCTION.md — User-facing guide with use cases, getting started, examples
 
 ---
 
-## Pending Documentation Work
+## Completed Documentation Work
 
-1. **Task 8.4 — LaTeX documentation with figures** (in progress via cron job)
-   - 7-chapter LaTeX document with theory, architecture, user manual
-   - Python-generated figures (architecture diagram, star visualization, field morphologies)
-   - BibTeX references, glossary
-   - PDF compilation
+### Task 8.4 — LaTeX documentation with figures ✅
+- 7-chapter LaTeX document (main.tex + 7 chapters)
+- Architecture diagram (architecture_diagram.png, 139KB)
+- Star generation visualization (star_generation.png, 87KB)
+- BibTeX references (references.bib, 2900+ bytes)
+- Glossary entries (glossary-entries.tex)
+- Papers read summary (papers_read.md)
+- PDF generation script (generate_pdf.py) — requires working TeX installation
+- Theory-to-code mapping tables linking PSCF++ concepts to SAFB C functions
 
-2. **Task 8.5 — Fix 2D ops file Git LFS issue** (in progress via cron job)
-   - Check if p_1.txt, p_2.txt are LFS placeholders
-   - Try `git lfs pull`
-   - If that fails, recreate from Python source data
+### Task 8.5 — Fix 2D ops file Git LFS issue ✅
+- Verified all 2D space group files contain real data (no LFS placeholders)
+- Cleaned up duplicate lowercase `square/` directory
+- All 17 wallpaper groups covered across 4 lattice families
+
+### Task 8.3 — Papers read ✅
+- 8 sources documented with summaries and relevance notes
 
 ## Summary
 
