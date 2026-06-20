@@ -1,0 +1,5 @@
+
+map
+% Map msbm (AMS Bold) to lmodern's lmbsy
+msbm10 lmbsy10
+msbm7 lmbsy7

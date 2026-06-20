@@ -5,7 +5,7 @@
 The field is computed using the inverse Fast Fourier Transform (FFT):
 
 \begin{equation}
-    \psi(\mathbf{r}_j) = \mathcal{F}^{-1}\{ c_{\mathbf{q}_n} \}
+    \psi(\boldsymbol{r}_j) = \mathcal{F}^{-1}\{ c_{\boldsymbol{q}_n} \}
 \end{equation}
 
 \subsection{FFTW Integration}
@@ -20,8 +20,8 @@ The library uses FFTW (Fastest Fourier Transform in the West) for efficient FFT 
 
 The forward and inverse transforms are:
 \begin{equation}
-    \tilde{f}(\mathbf{q}) = \sum_{\mathbf{r}} f(\mathbf{r}) \exp(-i \mathbf{q} \cdot \mathbf{r}), \quad
-    f(\mathbf{r}) = \frac{1}{N} \sum_{\mathbf{q}} \tilde{f}(\mathbf{q}) \exp(i \mathbf{q} \cdot \mathbf{r})
+    \tilde{f}(\boldsymbol{q}) = \sum_{\boldsymbol{r}} f(\boldsymbol{r}) \exp(-i \boldsymbol{q} \cdot \boldsymbol{r}), \quad
+    f(\boldsymbol{r}) = \frac{1}{N} \sum_{\boldsymbol{q}} \tilde{f}(\boldsymbol{q}) \exp(i \boldsymbol{q} \cdot \boldsymbol{r})
 \end{equation}
 
 \subsection{Grid Quadrature}
@@ -84,7 +84,7 @@ where $\epsilon = 10^{-10}$ is the numerical tolerance. If any constraint is vio
 
 A star is ``cancelled'' when the symmetry constraints are so restrictive that all coefficients must be zero. This occurs when:
 \begin{itemize}
-    \item A centered lattice operation $(I, \mathbf{t})$ with $\mathbf{t} \neq 0$ produces systematic cancellations
+    \item A centered lattice operation $(I, \boldsymbol{t})$ with $\boldsymbol{t} \neq 0$ produces systematic cancellations
     \item The phase factor $e^{i\phi} = -1$ for a self-referential constraint, forcing $c = -c = 0$
 \end{itemize}
 
@@ -120,7 +120,7 @@ Coefficient solver & $10^{-10}$ \\
 The discrete Fourier transform introduces aliasing effects. Components with wavevectors exceeding the Nyquist frequency are folded back into the grid. The SAFB library handles this by:
 
 \begin{itemize}
-    \item Only including stars with $|\mathbf{q}|$ within the grid's resolution
+    \item Only including stars with $|\boldsymbol{q}|$ within the grid's resolution
     \item Using grid sizes that are multiples of the symmetry order (e.g., $N$ divisible by 4 for square symmetry)
     \item Verifying that all star vectors map to valid grid points
 \end{itemize}
